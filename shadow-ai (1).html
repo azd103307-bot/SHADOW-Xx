@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<title>SHADOW AI</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101e31;--panel2:#142740;--line:#263c59;--text:#edf5ff;--muted:#9eb2ca;--cyan:#5ce1e6;--green:#62dfa8}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#132a42 0,#07111f 45%);color:var(--text);font-family:system-ui,"Noto Sans Arabic",sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:2;background:#07111feF;border-bottom:1px solid var(--line);padding:14px 16px;backdrop-filter:blur(12px)}
+.brand{display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#5ce1e6,#3173a8);display:grid;place-items:center;color:#061321;font-weight:900}.brand h1{font-size:17px;margin:0}.brand p{font-size:11px;color:var(--muted);margin:2px 0 0}
+main{max-width:850px;margin:auto;padding:18px 14px 110px}.intro{padding:18px 4px 12px}.intro h2{font-size:25px;margin:0 0 8px}.intro p{color:var(--muted);line-height:1.8;margin:0;font-size:13px}
+.status{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.chip{border:1px solid var(--line);background:#0d1a2b;border-radius:30px;padding:6px 10px;font-size:11px;color:#c8d8eb}
+.chat{display:grid;gap:12px}.bubble{border:1px solid var(--line);border-radius:16px;padding:13px 14px;background:var(--panel);line-height:1.8;font-size:14px;overflow-wrap:anywhere}.bubble.user{background:#123044;border-color:#245b70}.bubble .who{font-size:11px;color:var(--cyan);font-weight:800;margin-bottom:5px}.bubble p{margin:0}.sources{display:grid;gap:9px;margin-top:12px}.source{background:#0b1727;border:1px solid var(--line);border-radius:12px;padding:11px}.source a{color:#8de9ee;text-decoration:none;font-weight:700;font-size:13px}.source p{color:#c1cede;font-size:12px;line-height:1.7;margin:6px 0}.source small{color:var(--muted)}
+.composer{position:fixed;bottom:0;left:0;right:0;background:#07111ff2;border-top:1px solid var(--line);padding:12px max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));backdrop-filter:blur(14px)}
+.composer-inner{max-width:850px;margin:auto;display:flex;gap:8px;align-items:end}.composer textarea{flex:1;min-height:48px;max-height:130px;resize:vertical;border:1px solid var(--line);border-radius:14px;background:#0e1b2d;color:var(--text);padding:12px;font:inherit;outline:none}.composer button,.action{border:0;border-radius:13px;padding:13px 16px;background:var(--cyan);color:#06212b;font-weight:900;cursor:pointer}.composer button:disabled{opacity:.5}.hint{max-width:850px;margin:7px auto 0;color:var(--muted);font-size:10px;padding:0 4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.action{background:#18324b;color:#dffbff;border:1px solid #2a526c;font-size:12px;padding:8px 11px}
+.progress{height:4px;background:#15273b;border-radius:9px;overflow:hidden;margin-top:10px}.progress span{display:block;height:100%;width:30%;background:var(--cyan);animation:move 1s infinite alternate}@keyframes move{to{width:95%}}
+.notice{font-size:11px;color:#b5c7dc;background:#101e31;border:1px solid var(--line);padding:10px;border-radius:12px;line-height:1.7;margin-top:12px}
+@media(min-width:650px){main{padding-top:28px}.intro h2{font-size:30px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">S</div><div><h1>SHADOW AI</h1><p>مساعد البحث والتحليل متعدد المصادر</p></div></div></header>
+<main>
+<section class="intro"><h2>ما الذي تريد معرفته؟</h2><p>اكتب سؤالك. سيبحث SHADOW AI في مصادر عامة متعددة، ويجمع النتائج المتاحة ويعرض روابطها لتتمكن من مراجعتها.</p>
+<div class="status"><span class="chip">🌐 بحث عبر الإنترنت</span><span class="chip">📚 مصادر وروابط</span><span class="chip">🔒 دون خادم خاص</span></div></section>
+<section id="chat" class="chat" aria-live="polite">
+<div class="bubble"><div class="who">SHADOW AI</div><p>أنا جاهز للبحث. اكتب سؤالًا واضحًا، وسأحاول جمع معلومات من ويكيبيديا وOpenAlex وCrossref. ستظهر المصادر وروابطها أسفل النتائج.</p></div>
+</section>
+<div class="notice">النسخة الأولى هي محرك بحث وتجميع مصادر، وليست بعدُ نموذجًا لغويًا قادرًا على توليد إجابات بمستوى ChatGPT. لا ترسل كلمات مرور أو معلومات خاصة. تختلف النتائج حسب توفر خدمات المصادر واتصال الإنترنت.</div>
+</main>
+<div class="composer"><div class="composer-inner"><textarea id="question" rows="1" placeholder="اكتب سؤالك هنا..." aria-label="سؤالك"></textarea><button id="send">بحث</button></div><div class="hint">Enter للبحث · Shift + Enter لسطر جديد</div></div>
+<script>
+(function(){
+const chat=document.getElementById('chat'),input=document.getElementById('question'),send=document.getElementById('send');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function bubble(who,text,cls=''){const el=document.createElement('div');el.className='bubble '+cls;el.innerHTML='<div class="who">'+esc(who)+'</div><p>'+esc(text).replace(/\n/g,'<br>')+'</p>';chat.appendChild(el);return el}
+function sourceCard(items){const wrap=document.createElement('div');wrap.className='sources';items.forEach(x=>{const el=document.createElement('article');el.className='source';el.innerHTML='<a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><p>'+esc(x.text||'لا يوجد ملخص متاح.')+'</p><small>'+esc(x.provider)+'</small>';wrap.appendChild(el)});chat.appendChild(wrap)}
+async function json(url){const r=await fetch(url,{headers:{'Accept':'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function searchWikipedia(q){
+ const u='https://'+(/[ء-ي]/.test(q)?'ar':'en')+'.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(q)+'&gsrlimit=5& prop=extracts&exintro=1&explaintext=1&exchars=500&format=json&origin=*';
+ const d=await json(u);return Object.values(d.query?.pages||{}).map(p=>({title:p.title,text:p.extract||'',url:'https://'+(/[ء-ي]/.test(q)?'ar':'en')+'.wikipedia.org/?curid='+p.pageid,provider:'Wikipedia'}));
+}
+async function searchCrossref(q){
+ const d=await json('https://api.crossref.org/works?query='+encodeURIComponent(q)+'&rows=5&select=title,author,published,URL,abstract');
+ return (d.message?.items||[]).map(x=>({title:x.title?.[0]||'بحث علمي',text:(x.abstract||'').replace(/<[^>]+>/g,' ').slice(0,500)||('مؤلفون: '+(x.author||[]).slice(0,3).map(a=>(a.given||'')+' '+(a.family||'')).join('، ')),url:x.URL||'https://search.crossref.org/?q='+encodeURIComponent(q),provider:'Crossref'}));
+}
+async function searchOpenAlex(q){
+ const d=await json('https://api.openalex.org/works?search='+encodeURIComponent(q)+'&per-page=5');
+ return (d.results||[]).map(x=>({title:x.title||'بحث أكاديمي',text:'سنة النشر: '+(x.publication_year||'غير محددة')+' · الاستشهادات: '+(x.cited_by_count||0),url:x.doi||x.primary_location?.landing_page_url||x.id,provider:'OpenAlex'}));
+}
+function summarize(items,q){
+ if(!items.length)return 'لم تصل نتائج من المصادر المتاحة. جرّب صياغة أخرى أو تحقق من اتصال الإنترنت.';
+ const unique=[...new Set(items.map(x=>x.provider))];
+ return 'بحثت عن: "'+q+'". عثرت على '+items.length+' نتيجة من '+unique.join(' و ')+'. راجع الروابط والملخصات أدناه، وقارن المعلومات قبل الاعتماد عليها. هذه خلاصة تجميعية أولية وليست تحققًا مستقلًا من صحة كل معلومة.';
+}
+async function run(){
+ const q=input.value.trim();if(!q)return;
+ bubble('أنت',q,'user');input.value='';send.disabled=true;send.textContent='...';
+ const loading=bubble('SHADOW AI','أبحث في المصادر العامة الآن...');
+ const bar=document.createElement('div');bar.className='progress';bar.innerHTML='<span></span>';loading.appendChild(bar);
+ const tasks=await Promise.allSettled([searchWikipedia(q),searchCrossref(q),searchOpenAlex(q)]);
+ const items=tasks.flatMap(t=>t.status==='fulfilled'?t.value:[]);
+ loading.remove();
+ bubble('SHADOW AI',summarize(items,q));
+ if(items.length)sourceCard(items);
+ const failed=tasks.filter(t=>t.status==='rejected').length;
+ if(failed)bubble('ملاحظة تقنية','تعذر الوصول إلى '+failed+' مصدر/مصادر. قد يكون السبب اتصال الشبكة أو قيود الخدمة. يمكنك فتح روابط البحث العامة من متصفحك.');
+ send.disabled=false;send.textContent='بحث';window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+send.addEventListener('click',run);
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();run()}});
+})();
+</script>
+</body></html>
