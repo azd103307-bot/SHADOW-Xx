@@ -1,174 +1,352 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
+<meta name="description" content="SHADOW AI — مساعد ذكي للمحادثة والبحث متعدد المصادر">
 <title>SHADOW AI</title>
 <style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101e31;--panel2:#142740;--line:#263c59;--text:#edf5ff;--muted:#9eb2ca;--cyan:#5ce1e6;--green:#62dfa8;--danger:#ff7777}
 *{box-sizing:border-box}
-body{margin:0;background:#07111f;color:#eaf4ff;font-family:Arial,sans-serif}
-header{padding:20px;background:#0d1c30;border-bottom:1px solid #24445d}
-h1{margin:0;color:#62e5ed;font-size:25px}
-header p{color:#91a9bd;margin-bottom:0}
-nav{display:flex;gap:8px;padding:12px;position:sticky;top:0;background:#07111f}
-nav button,.action{background:#123047;color:#8ffaff;border:1px solid #286078;padding:12px;border-radius:10px;font-weight:bold}
-nav button{flex:1}
-nav button.active{background:#176078}
-main{padding:14px;max-width:850px;margin:auto}
-.panel{display:none}
-.panel.active{display:block}
-.card{background:#0e1e32;border:1px solid #203c55;border-radius:15px;padding:15px;margin-bottom:13px}
-textarea,input{width:100%;background:#081626;color:white;border:1px solid #34516b;border-radius:10px;padding:13px;font-size:16px}
-textarea{min-height:100px;resize:vertical}
-.action{width:100%;margin-top:10px;background:#126078;color:white}
-.answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
-.message{padding:12px;margin:10px 0;border-radius:12px;background:#142b40}
-.user{border-right:3px solid #62e5ed}
-.ai{border-right:3px solid #37b987}
-.result{padding:12px;margin:10px 0;background:#13283d;border-radius:10px;overflow-wrap:anywhere}
-a{color:#68e6ed}
-small{color:#91a9bd}
-#status{color:#ffd27a;margin-top:10px}
+html{min-height:100%;scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% -10%,#173b58 0,#07111f 45%);color:var(--text);font-family:system-ui,"Noto Sans Arabic",Arial,sans-serif}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:5;background:#07111ff2;border-bottom:1px solid var(--line);backdrop-filter:blur(14px);padding:12px 14px}
+.top-inner{max-width:920px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:42px;height:42px;flex:0 0 42px;border-radius:14px;background:linear-gradient(135deg,#83f2ee,#2877a8);display:grid;place-items:center;color:#061321;font-weight:1000;font-size:23px;box-shadow:0 5px 25px #39cbd52b}
+.brand h1{font-size:17px;margin:0;letter-spacing:.5px}
+.brand p{font-size:11px;color:var(--muted);margin:3px 0 0}
+.top-actions{display:flex;align-items:center;gap:8px}
+.status{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#0d1a2b;border-radius:30px;padding:7px 10px;color:var(--muted);font-size:11px;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#8797aa}
+.dot.online{background:var(--green);box-shadow:0 0 10px #62dfa866}
+.icon-btn{width:38px;height:38px;border:1px solid var(--line);background:#102238;color:var(--text);border-radius:12px}
+main{max-width:920px;margin:auto;padding:20px 14px 150px}
+.hero{padding:10px 3px 18px}
+.hero h2{font-size:25px;margin:0 0 7px;line-height:1.4}
+.hero p{font-size:13px;color:var(--muted);line-height:1.8;margin:0}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.chip{border:1px solid var(--line);background:#0d1a2b;border-radius:25px;padding:6px 10px;color:#c5d9ec;font-size:11px}
+.tabs{display:flex;gap:7px;padding:7px;background:#0b1828;border:1px solid var(--line);border-radius:15px;margin-bottom:14px}
+.tab{flex:1;min-width:0;border:0;border-radius:10px;background:transparent;color:var(--muted);padding:11px 6px;font-size:12px;font-weight:800}
+.tab.active{background:#173b53;color:#9cf4f2;box-shadow:inset 0 0 0 1px #2c6679}
+.panel{display:none}.panel.active{display:block}
+.card{background:#101e31;border:1px solid var(--line);border-radius:17px;padding:15px;margin-bottom:13px}
+.card h3{margin:0 0 8px;font-size:16px}
+.card p{color:var(--muted);font-size:13px;line-height:1.8}
+.chat{display:grid;gap:10px;min-height:180px}
+.bubble{background:#101e31;border:1px solid var(--line);border-radius:15px;padding:13px 14px;line-height:1.9;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 3px 12px #00000012}
+.bubble.user{background:#123044;border-color:#245b70}
+.bubble .who{font-size:11px;color:var(--cyan);font-weight:900;margin-bottom:5px}
+.bubble.user .who{color:#abd8ff}
+.bubble.error{border-color:#8f4545}
+.typing{display:flex;align-items:center;gap:5px;height:18px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1s infinite alternate}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes pulse{to{opacity:.25;transform:translateY(-3px)}}
+.quick{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.quick button{background:#132940;border:1px solid #28465f;color:#cbe8f6;padding:8px 10px;border-radius:11px;font-size:11px}
+.composer{position:fixed;bottom:0;left:0;right:0;z-index:4;background:#07111ff4;border-top:1px solid var(--line);padding:11px max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));backdrop-filter:blur(14px)}
+.composer-inner{max-width:920px;margin:auto;display:flex;align-items:end;gap:8px}
+#question{flex:1;min-height:48px;max-height:140px;resize:vertical;border:1px solid #34516b;border-radius:14px;background:#0e1b2d;color:var(--text);padding:12px;font:inherit;font-size:14px;outline:none}
+#question:focus,.field:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #5ce1e61c}
+.send{height:48px;min-width:75px;border:0;border-radius:13px;background:var(--cyan);color:#06212b;font-weight:1000;padding:0 16px}
+.send:disabled{opacity:.5;cursor:default}
+.hint{max-width:920px;margin:6px auto 0;color:#8298b0;font-size:10px;padding:0 3px}
+.action{border:1px solid #2a526c;background:#18324b;color:#dffbff;border-radius:11px;padding:10px 12px;font-size:12px;font-weight:800}
+.action.primary{background:var(--cyan);color:#06212b;border-color:var(--cyan)}
+.action.danger{border-color:#78444a;color:#ffaaaa;background:#301c2a}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field{width:100%;background:#081626;color:white;border:1px solid #34516b;border-radius:11px;padding:12px;font-size:14px;outline:none}
+.label{display:block;color:#bfd0e1;font-size:12px;margin:13px 0 7px}
+.note{font-size:12px;line-height:1.8;color:var(--muted);background:#0c1b2c;border:1px solid var(--line);border-radius:12px;padding:11px;margin-top:12px}
+.result-list{display:grid;gap:9px;margin-top:12px}
+.result{border:1px solid var(--line);background:#0b192a;border-radius:13px;padding:12px}
+.result a{color:#8de9ee;font-size:13px;font-weight:850;text-decoration:none}
+.result p{margin:7px 0 5px;color:#c1cede;font-size:12px;line-height:1.7}
+.result small{color:var(--muted);font-size:10px}
+.empty{padding:24px 12px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
+.muted{color:var(--muted)}
+.footer{text-align:center;color:#71869f;font-size:10px;margin:22px 0}
+@media(min-width:700px){main{padding-top:27px}.hero h2{font-size:30px}.card{padding:18px}}
 </style>
 </head>
 <body>
-<header>
-<h1>🧠 SHADOW AI</h1>
-<p>منصة الذكاء الاصطناعي والبحث الذكي</p>
+<header class="top">
+ <div class="top-inner">
+  <div class="brand"><div class="logo">S</div><div><h1>SHADOW AI</h1><p>مساعدك الذكي · محادثة وبحث</p></div></div>
+  <div class="top-actions">
+   <div class="status" id="status"><span class="dot" id="statusDot"></span><span id="statusText">يتحقق من الاتصال</span></div>
+   <button class="icon-btn" id="clearBtn" title="مسح المحادثة" aria-label="مسح المحادثة">⌫</button>
+  </div>
+ </div>
 </header>
-
-<nav>
-<button class="active" onclick="showTab('chat',this)">المساعد AI</button>
-<button onclick="showTab('search',this)">البحث</button>
-<button onclick="showTab('about',this)">حول النظام</button>
-</nav>
-
 <main>
-<section id="chat" class="panel active">
-<div class="card">
-<h3>محادثة SHADOW AI</h3>
-<div id="conversation">
-<div class="message ai answer">مرحباً بك في SHADOW AI. اكتب سؤالك للبدء.</div>
-</div>
-<textarea id="question" placeholder="اكتب سؤالك هنا..."></textarea>
-<button class="action" onclick="sendMessage()">إرسال الرسالة</button>
-<div id="status"></div>
-</div>
-</section>
+ <section class="hero">
+  <h2>أهلاً بك في SHADOW AI</h2>
+  <p>مساعد ذكي للمحادثة والإجابة عن الأسئلة، مع أداة بحث تعرض لك روابط المصادر حتى تراجع المعلومات بنفسك.</p>
+  <div class="chips"><span class="chip">🤖 محادثة ذكية</span><span class="chip">🌐 بحث متعدد المصادر</span><span class="chip">🔐 لا مفاتيح داخل التطبيق</span></div>
+ </section>
 
-<section id="search" class="panel">
-<div class="card">
-<h3>🔎 SHADOW SEARCH</h3>
-<p>ابحث في الموسوعة والمراجع والأبحاث العلمية.</p>
-<input id="searchQuery" placeholder="اكتب موضوع البحث">
-<button class="action" onclick="runSearch()">ابدأ البحث</button>
-<div id="searchStatus"></div>
-<div id="results"></div>
-</div>
-</section>
+ <nav class="tabs" aria-label="أقسام التطبيق">
+  <button class="tab active" data-tab="chatPanel">المساعد</button>
+  <button class="tab" data-tab="searchPanel">البحث</button>
+  <button class="tab" data-tab="settingsPanel">الإعدادات</button>
+ </nav>
 
-<section id="about" class="panel">
-<div class="card">
-<h3>SHADOW AI v1</h3>
-<p>واجهة للمساعد الذكي والبحث متعدد المصادر.</p>
-<p>مصادر البحث: Wikipedia وCrossref وOpenAlex.</p>
-<p>حالة الذكاء الاصطناعي: يحتاج إلى ربط بخادم نموذج ذكي.</p>
-<p>لن نضع مفاتيح API السرية داخل هذا الملف.</p>
-</div>
-</section>
+ <section id="chatPanel" class="panel active">
+  <div class="card">
+   <div id="chat" class="chat" aria-live="polite"></div>
+   <div class="quick">
+    <button data-prompt="اشرح لي الذكاء الاصطناعي بطريقة بسيطة.">اشرح الذكاء الاصطناعي</button>
+    <button data-prompt="اكتب لي خطة لتعلم البرمجة من الصفر.">خطة تعلم البرمجة</button>
+    <button data-prompt="ما أفضل طريقة للتحقق من صحة معلومة على الإنترنت؟">التحقق من المعلومات</button>
+   </div>
+  </div>
+ </section>
+
+ <section id="searchPanel" class="panel">
+  <div class="card">
+   <h3>🔎 SHADOW SEARCH</h3>
+   <p>ابحث في ويكيبيديا والمراجع العلمية. النتائج روابط من المصادر الأصلية وليست ضماناً لصحة كل معلومة.</p>
+   <label class="label" for="searchQuery">موضوع البحث</label>
+   <input class="field" id="searchQuery" maxlength="180" placeholder="مثال: الطاقة الشمسية">
+   <div class="row" style="margin-top:10px"><button class="action primary" id="searchBtn">ابدأ البحث</button><span class="muted" id="searchStatus" aria-live="polite"></span></div>
+   <div id="results" class="result-list"></div>
+  </div>
+ </section>
+
+ <section id="settingsPanel" class="panel">
+  <div class="card">
+   <h3>حالة الاتصال</h3>
+   <p>عنوان خادم SHADOW AI المستخدم في هذا التطبيق:</p>
+   <input class="field" id="apiUrl" readonly>
+   <div class="row" style="margin-top:12px">
+    <button class="action primary" id="testBtn">اختبار الاتصال</button>
+    <button class="action" id="copyApiBtn">نسخ العنوان</button>
+   </div>
+   <div class="note" id="healthResult">يجري التحقق من خادم الذكاء الاصطناعي.</div>
+  </div>
+  <div class="card">
+   <h3>الخصوصية والاستخدام</h3>
+   <p>تُحفظ المحادثة على هذا الجهاز في مساحة التخزين المحلية للمتصفح. عند إرسال رسالة، تُرسل الرسائل الأخيرة إلى خادم الذكاء الاصطناعي لتوليد الرد. لا تكتب كلمات المرور أو بياناتك الحساسة.</p>
+   <p>يعتمد المساعد على الحصة المجانية اليومية المتاحة في Cloudflare Workers AI؛ قد يتوقف مؤقتاً عند نفادها حتى موعد إعادة التعيين أو عند حدوث عطل بالخدمة.</p>
+   <div class="row"><button class="action" id="copyChatBtn">نسخ المحادثة</button><button class="action danger" id="deleteChatBtn">حذف المحادثة المحفوظة</button></div>
+  </div>
+  <div class="card">
+   <h3>عن SHADOW AI</h3>
+   <p>الإصدار 2.0 · واجهة عربية متوافقة مع الهاتف وAndroid WebView. لا يحتوي التطبيق على مفاتيح API مضمّنة.</p>
+  </div>
+ </section>
+ <div class="footer">SHADOW AI · إصدار تجريبي متصل بمحرك Workers AI</div>
 </main>
 
+<div class="composer" id="composer">
+ <div class="composer-inner">
+  <textarea id="question" rows="1" maxlength="4000" placeholder="اكتب سؤالك هنا..." aria-label="اكتب سؤالك"></textarea>
+  <button class="send" id="sendBtn">إرسال</button>
+ </div>
+ <div class="hint">Enter للإرسال · Shift + Enter لسطر جديد</div>
+</div>
+
 <script>
-function showTab(id,button){
-document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-button.classList.add('active');
-}
+(function(){
+"use strict";
+const API_BASE="https://shadow-ai.azd103307.workers.dev";
+const MODEL_LABEL="Cloudflare Workers AI";
+const STORE_KEY="shadow-ai-chat-v2";
+const chat=document.getElementById("chat");
+const input=document.getElementById("question");
+const sendBtn=document.getElementById("sendBtn");
+const statusText=document.getElementById("statusText");
+const statusDot=document.getElementById("statusDot");
+const healthResult=document.getElementById("healthResult");
+let busy=false;
+let messages=[];
 
-function addMessage(text,type){
-const box=document.createElement('div');
-box.className='message '+type+' answer';
-box.textContent=text;
-document.getElementById('conversation').appendChild(box);
-box.scrollIntoView({behavior:'smooth',block:'end'});
+function readStore(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");
+  if(Array.isArray(saved))return saved.filter(x=>x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").slice(-40);
+ }catch(e){}
+ return [];
 }
+function saveStore(){
+ try{localStorage.setItem(STORE_KEY,JSON.stringify(messages.slice(-40)))}catch(e){}
+}
+function setStatus(text,online){
+ statusText.textContent=text;
+ statusDot.className=online?"dot online":"dot";
+}
+function makeBubble(role,text,extra){
+ const el=document.createElement("article");
+ el.className="bubble "+(role==="user"?"user":"")+(extra?" "+extra:"");
+ const who=document.createElement("div");
+ who.className="who";
+ who.textContent=role==="user"?"أنت":"SHADOW AI";
+ const body=document.createElement("div");
+ body.textContent=text;
+ el.append(who,body);
+ chat.appendChild(el);
+ return el;
+}
+function render(){
+ chat.replaceChildren();
+ if(!messages.length){
+  makeBubble("assistant","مرحباً. أنا SHADOW AI، اكتب سؤالك وسأحاول مساعدتك. يمكنك أيضاً استخدام قسم البحث لجمع مراجع وروابط.");
+ }else{
+  messages.forEach(m=>makeBubble(m.role,m.content));
+ }
+ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function addMessage(role,content){
+ messages.push({role:role,content:content,at:Date.now()});
+ messages=messages.slice(-40);
+ saveStore();
+ makeBubble(role,content);
+ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function showTyping(){
+ const el=document.createElement("article");
+ el.className="bubble";
+ el.id="typingBubble";
+ const who=document.createElement("div");
+ who.className="who";who.textContent="SHADOW AI";
+ const dots=document.createElement("div");
+ dots.className="typing";dots.innerHTML="<i></i><i></i><i></i>";
+ el.append(who,dots);chat.appendChild(el);
+ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function switchTab(id){
+ document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===id));
+ document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===id));
+ document.getElementById("composer").style.display=id==="chatPanel"?"block":"none";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
 
-async function sendMessage(){
-const input=document.getElementById('question');
-const status=document.getElementById('status');
-const q=input.value.trim();
-if(!q)return;
-addMessage(q,'user');
-input.value='';
-status.textContent='جارٍ الاتصال بالمساعد...';
-try{
-const response=await fetch('/api/chat',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({message:q})
-});
-if(!response.ok)throw new Error('الخادم غير متصل');
-const data=await response.json();
-addMessage(data.reply || data.response || 'لم تصل إجابة من الخادم.','ai');
-status.textContent='';
-}catch(error){
-addMessage('واجهة SHADOW AI جاهزة، لكن لم يتم ربط محرك الذكاء الاصطناعي بالخادم بعد. نحتاج إعداد خادم آمن للمحادثة.','ai');
-status.textContent='بانتظار إعداد اتصال الذكاء الاصطناعي.';
+async function sendMessage(textOverride){
+ if(busy)return;
+ const q=(typeof textOverride==="string"?textOverride:input.value).trim();
+ if(!q)return;
+ if(q.length>4000){alert("الرسالة طويلة جداً. اختصرها ثم أعد الإرسال.");return;}
+ addMessage("user",q);
+ input.value="";
+ busy=true;sendBtn.disabled=true;sendBtn.textContent="...";
+ showTyping();
+ try{
+  const payload={messages:messages.filter(m=>m.role==="user"||m.role==="assistant").slice(-10).map(m=>({role:m.role,content:m.content}))};
+  const response=await fetch(API_BASE+"/api/chat",{
+   method:"POST",
+   headers:{"Content-Type":"application/json","Accept":"application/json"},
+   body:JSON.stringify(payload)
+  });
+  let data={};
+  try{data=await response.json()}catch(e){}
+  const typing=document.getElementById("typingBubble");if(typing)typing.remove();
+  if(!response.ok){
+   const msg=data.error||"تعذر الحصول على رد من الخادم. تحقق من إعداد Workers AI أو الحصة اليومية.";
+   addMessage("assistant","تعذر إكمال الطلب: "+msg);
+   setStatus("تعذر الاتصال",false);
+  }else{
+   const reply=String(data.reply||data.response||"لم يصل نص من النموذج.");
+   addMessage("assistant",reply);
+   setStatus("متصل",true);
+  }
+ }catch(e){
+  const typing=document.getElementById("typingBubble");if(typing)typing.remove();
+  addMessage("assistant","لم أستطع الوصول إلى خادم الذكاء الاصطناعي. تحقق من الإنترنت ومن نشر ملف worker.js وربط Workers AI بالمتغير AI في Cloudflare.");
+  setStatus("غير متصل",false);
+ }finally{
+  busy=false;sendBtn.disabled=false;sendBtn.textContent="إرسال";input.focus();
+ }
 }
-}
+sendBtn.addEventListener("click",()=>sendMessage());
+input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}});
+document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
 
+function addSearchResult(container,item){
+ const card=document.createElement("article");card.className="result";
+ const link=document.createElement("a");link.href=item.url||"#";link.target="_blank";link.rel="noopener noreferrer";link.textContent=item.title||"نتيجة بحث";
+ const p=document.createElement("p");p.textContent=item.text||"لا يوجد ملخص متاح.";
+ const small=document.createElement("small");small.textContent=item.provider||"مصدر";
+ card.append(link,p,small);container.appendChild(card);
+}
 async function getJSON(url){
-const response=await fetch(url);
-if(!response.ok)throw new Error('فشل الاتصال بالمصدر');
-return response.json();
+ const r=await fetch(url,{headers:{"Accept":"application/json"}});
+ if(!r.ok)throw new Error("HTTP "+r.status);
+ return r.json();
 }
-
 async function runSearch(){
-const q=document.getElementById('searchQuery').value.trim();
-const results=document.getElementById('results');
-const status=document.getElementById('searchStatus');
-if(!q)return;
-results.replaceChildren();
-status.textContent='جارٍ البحث في المصادر...';
-const tasks=await Promise.allSettled([
-getJSON('https://ar.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(q)+'&gsrlimit=5&prop=extracts&exintro=1&explaintext=1&format=json&origin=*'),
-getJSON('https://api.crossref.org/works?query='+encodeURIComponent(q)+'&rows=5'),
-getJSON('https://api.openalex.org/works?search='+encodeURIComponent(q)+'&per-page=5')
-]);
-let count=0;
-function add(title,description,url,source){
-const card=document.createElement('div');
-card.className='result';
-const link=document.createElement('a');
-link.href=url;
-link.target='_blank';
-link.rel='noopener noreferrer';
-link.textContent=title;
-const p=document.createElement('p');
-p.textContent=description;
-const small=document.createElement('small');
-small.textContent=source;
-card.append(link,p,small);
-results.appendChild(card);
-count++;
+ const q=document.getElementById("searchQuery").value.trim();
+ const results=document.getElementById("results");
+ const info=document.getElementById("searchStatus");
+ if(!q)return;
+ results.replaceChildren();info.textContent="جارٍ البحث...";
+ const arabic=/[ء-ي]/.test(q),wikiLang=arabic?"ar":"en";
+ const wikiUrl="https://"+wikiLang+".wikipedia.org/w/api.php?action=query&generator=search&gsrsearch="+encodeURIComponent(q)+"&gsrlimit=5&prop=extracts&exintro=1&explaintext=1&exchars=500&format=json&origin=*";
+ const jobs=await Promise.allSettled([
+  getJSON(wikiUrl),
+  getJSON("https://api.crossref.org/works?query="+encodeURIComponent(q)+"&rows=5&select=title,author,published,URL,abstract"),
+  getJSON("https://api.openalex.org/works?search="+encodeURIComponent(q)+"&per-page=5")
+ ]);
+ let count=0,failed=0;
+ if(jobs[0].status==="fulfilled"){
+  Object.values(jobs[0].value.query?.pages||{}).forEach(p=>{
+   addSearchResult(results,{title:p.title,text:p.extract||"لا يوجد ملخص",url:"https://"+wikiLang+".wikipedia.org/?curid="+p.pageid,provider:"Wikipedia"});count++;
+  });
+ }else failed++;
+ if(jobs[1].status==="fulfilled"){
+  (jobs[1].value.message?.items||[]).forEach(x=>{
+   addSearchResult(results,{title:x.title?.[0]||"بحث علمي",text:(x.abstract||"").replace(/<[^>]+>/g," ").slice(0,420)||("الناشر: "+(x.publisher||"غير محدد")+" · سنة النشر: "+(x.published?.["date-parts"]?.[0]?.[0]||"غير محددة")),url:x.URL||"https://search.crossref.org/",provider:"Crossref"});count++;
+  });
+ }else failed++;
+ if(jobs[2].status==="fulfilled"){
+  (jobs[2].value.results||[]).forEach(x=>{
+   addSearchResult(results,{title:x.title||"بحث أكاديمي",text:"سنة النشر: "+(x.publication_year||"غير محددة")+" · الاستشهادات: "+(x.cited_by_count||0),url:x.doi||x.primary_location?.landing_page_url||x.id||"https://openalex.org/",provider:"OpenAlex"});count++;
+  });
+ }else failed++;
+ info.textContent=count?"تم العثور على "+count+" نتيجة"+(failed?" · تعذر الوصول إلى "+failed+" مصدر":""):"لم تصل نتائج. تحقق من الإنترنت أو غيّر كلمات البحث.";
+ if(!count){const empty=document.createElement("div");empty.className="empty";empty.textContent="لا توجد نتائج متاحة حالياً.";results.appendChild(empty);}
 }
-if(tasks[0].status==='fulfilled'){
-Object.values(tasks[0].value.query?.pages||{}).forEach(p=>
-add(p.title,p.extract||'لا يوجد ملخص','https://ar.wikipedia.org/?curid='+p.pageid,'Wikipedia'));
+document.getElementById("searchBtn").addEventListener("click",runSearch);
+document.getElementById("searchQuery").addEventListener("keydown",e=>{if(e.key==="Enter")runSearch();});
+
+async function testConnection(){
+ healthResult.textContent="جارٍ الاتصال بالخادم...";
+ try{
+  const r=await fetch(API_BASE+"/api/health",{headers:{"Accept":"application/json"}});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||"HTTP "+r.status);
+  const ready=d.aiBinding===true;
+  healthResult.textContent=ready?"الخادم يعمل وربط Workers AI ظاهر. النموذج: "+(d.model||MODEL_LABEL):"الخادم متاح، لكن ربط Workers AI غير مكتمل. أضف AI Binding باسم AI في إعدادات Worker.";
+  setStatus(ready?"متصل":"يحتاج إعداداً",ready);
+ }catch(e){
+  healthResult.textContent="فشل الاتصال: "+e.message;
+  setStatus("غير متصل",false);
+ }
 }
-if(tasks[1].status==='fulfilled'){
-(tasks[1].value.message?.items||[]).forEach(x=>
-add(x.title?.[0]||'بحث علمي','مرجع علمي: '+(x.publisher||'')+' | سنة النشر: '+(x.published?.['date-parts']?.[0]?.[0]||'غير محددة'),x.URL||'https://search.crossref.org/','Crossref'));
+document.getElementById("apiUrl").value=API_BASE;
+document.getElementById("testBtn").addEventListener("click",testConnection);
+document.getElementById("copyApiBtn").addEventListener("click",()=>copyText(API_BASE));
+document.getElementById("copyChatBtn").addEventListener("click",()=>copyText(messages.map(m=>(m.role==="user"?"أنت":"SHADOW AI")+":\n"+m.content).join("\n\n")));
+function copyText(value){
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(value).then(()=>{healthResult.textContent="تم النسخ."}).catch(()=>{healthResult.textContent="تعذر النسخ تلقائياً."});}
+ else{const t=document.createElement("textarea");t.value=value;document.body.appendChild(t);t.select();try{document.execCommand("copy");healthResult.textContent="تم النسخ."}catch(e){healthResult.textContent="تعذر النسخ."}t.remove();}
 }
-if(tasks[2].status==='fulfilled'){
-(tasks[2].value.results||[]).forEach(x=>
-add(x.title||'بحث أكاديمي','سنة النشر: '+(x.publication_year||'غير محددة')+' | الاستشهادات: '+(x.cited_by_count||0),x.doi||x.id||'https://openalex.org/','OpenAlex'));
+function clearChat(){
+ if(!confirm("هل تريد حذف المحادثة من هذا الجهاز؟"))return;
+ messages=[];saveStore();render();
 }
-status.textContent=count?'تم العثور على '+count+' نتيجة. تحقق من المصادر.':'لم تصل نتائج. تحقق من الإنترنت أو غيّر كلمات البحث.';
-}
+document.getElementById("clearBtn").addEventListener("click",clearChat);
+document.getElementById("deleteChatBtn").addEventListener("click",clearChat);
+messages=readStore();
+render();
+testConnection();
+})();
 </script>
 </body>
 </html>
