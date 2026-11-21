@@ -6,6 +6,7 @@ on:
     branches: [ main, shadow-ai-integration ]
     paths:
       - 'app/**'
+      - 'app.zip'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
@@ -37,6 +38,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+
+      - name: Restore app web assets if missing
+        shell: bash
+        run: |
+          if [ ! -f app/src/main/assets/index.html ]; then
+            test -f app.zip
+            unzip -l app.zip | grep -q 'app/src/main/assets/index.html'
+            mkdir -p app/src/main/assets
+            unzip -p app.zip app/src/main/assets/index.html > app/src/main/assets/index.html
+          fi
+          test -s app/src/main/assets/index.html
 
       - name: Verify Android project files
         run: |
