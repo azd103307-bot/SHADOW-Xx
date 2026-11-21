@@ -88,6 +88,8 @@ document.getElementById(id).classList.add('active');
 button.classList.add('active');
 }
 
+const chatHistory=[];
+
 function addMessage(text,type){
 const box=document.createElement('div');
 box.className='message '+type+' answer';
@@ -102,21 +104,25 @@ const status=document.getElementById('status');
 const q=input.value.trim();
 if(!q)return;
 addMessage(q,'user');
+chatHistory.push({role:'user',content:q});
 input.value='';
 status.textContent='جارٍ الاتصال بالمساعد...';
 try{
-const response=await fetch('/api/chat',{
+const response=await fetch('https://shadow-ai.azd103307.workers.dev/chat',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({message:q})
+body:JSON.stringify({message:q,history:chatHistory.slice(-10,-1)})
 });
-if(!response.ok)throw new Error('الخادم غير متصل');
-const data=await response.json();
-addMessage(data.reply || data.response || 'لم تصل إجابة من الخادم.','ai');
-status.textContent='';
+const data=await response.json().catch(()=>({}));
+if(!response.ok)throw new Error(data.error || ('خطأ من الخادم: '+response.status));
+const reply=data.reply || data.response;
+if(!reply)throw new Error('لم تصل إجابة من محرك الذكاء الاصطناعي.');
+addMessage(reply,'ai');
+chatHistory.push({role:'assistant',content:reply});
+status.textContent='متصل — SHADOW AI يعمل.';
 }catch(error){
-addMessage('واجهة SHADOW AI جاهزة، لكن لم يتم ربط محرك الذكاء الاصطناعي بالخادم بعد. نحتاج إعداد خادم آمن للمحادثة.','ai');
-status.textContent='بانتظار إعداد اتصال الذكاء الاصطناعي.';
+addMessage('تعذر الاتصال: '+error.message,'ai');
+status.textContent='فشل الاتصال بمحرك SHADOW AI.';
 }
 }
 
