@@ -1,0 +1,14 @@
+إعداد SHADOW AI على Cloudflare Worker
+
+1) افتح Worker باسم shadow-ai في Cloudflare.
+2) استبدل كود Worker بمحتوى cloudflare-worker/worker.js ثم اضغط Deploy.
+3) من Settings > Variables and Secrets أضف Secret اسمه GROQ_API_KEY وضع قيمة مفتاح Groq هناك فقط.
+4) اختبر: https://shadow-ai.azd103307.workers.dev/health
+   يجب أن يظهر ok:true و keyConfigured:true.
+5) افتح التطبيق وجرب مساعد SHADOW AI.
+
+الأمان:
+- لا تضع مفتاح Groq في index.html أو Java أو GitHub ولا ترسله في المحادثة.
+- CORS ليس مصادقة. رابط /chat عام حالياً.
+- قبل مشاركة التطبيق على نطاق واسع، أنشئ Cloudflare Rate Limiting Rule على المسار /chat وحدد عدداً منخفضاً للطلبات لكل IP.
+- راقب استخدام Groq وحدود الحساب. لا تعتبر هذا الإعداد محمياً من إساءة الاستخدام قبل إضافة تحديد المعدل.
