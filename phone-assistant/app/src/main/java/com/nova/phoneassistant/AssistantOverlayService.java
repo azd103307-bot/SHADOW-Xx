@@ -137,7 +137,8 @@ public class AssistantOverlayService extends Service {
             status.setText("فعّل خدمة NOVA للتحكم بالشاشة من إعدادات إمكانية الوصول أولاً.");
             return;
         }
-        status.setText(service.execute(text));
+        status.setText("بدأ تنفيذ الخطوات...");
+        service.executeSequence(text, message -> status.setText(message));
     }
 
     @Override public int onStartCommand(Intent intent,int flags,int startId) { showBubble(); return START_STICKY; }
