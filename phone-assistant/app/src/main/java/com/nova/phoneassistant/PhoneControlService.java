@@ -94,7 +94,7 @@ public class PhoneControlService extends AccessibilityService {
             performGlobalAction(GLOBAL_ACTION_HOME);
             return "تم الانتقال إلى الشاشة الرئيسية.";
         }
-        if (containsAny(lower, "اكتب", "اكتب النص", "type ")) {
+        if (containsAny(lower, "اكتب", "دوّن", "type ")) {
             String text = extractAfterVerb(normalized);
             return typeText(text);
         }
@@ -117,11 +117,11 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String extractAfterVerb(String s) {
-        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
+        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اكتب في","دوّن","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
         String lower = s.toLowerCase(Locale.ROOT);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
-            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى|تطبيق)\\s*", "").trim();
+            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى|تطبيق|في خانة الكتابة|في مربع النص)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
         }
         return s.trim();
     }
