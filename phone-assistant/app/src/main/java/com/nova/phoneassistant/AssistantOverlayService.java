@@ -91,34 +91,30 @@ public class AssistantOverlayService extends Service {
 
         EditText command = new EditText(this);
         activeCommandInput = command;
-        command.setHint("مثال: افتح يوتيوب");
+        command.setHint("اكتب أمرك هنا... مثال: افتح واتساب ثم اكتب مرحباً");
         command.setTextColor(Color.WHITE); command.setHintTextColor(Color.LTGRAY);
-        command.setTextSize(15); command.setMinLines(2); command.setGravity(Gravity.TOP|Gravity.RIGHT);
+        command.setTextSize(16); command.setMinLines(3); command.setMaxLines(5); command.setGravity(Gravity.TOP|Gravity.RIGHT); command.setSingleLine(false);
         command.setBackground(shape(Color.rgb(35,44,69),14));
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1,dp(94));
         cp.topMargin=dp(10); box.addView(command,cp);
 
         TextView status = new TextView(this);
-        status.setText("جاهز. أمثلة: افتح واتساب، اضغط بحث، اكتب مرحباً، مرر للأسفل.");
+        status.setText("تحكم كتابي فقط: افتح تطبيقاً، اكتب نصاً، اضغط عنصراً، مرّر أو ارجع.");
         status.setTextColor(Color.rgb(185,198,225)); status.setTextSize(12);
         status.setPadding(dp(2),dp(9),dp(2),dp(8)); box.addView(status);
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        Button voice = new Button(this); voice.setText("🎙 صوت"); voice.setAllCaps(false);
-        Button run = new Button(this); run.setText("تنفيذ الأمر"); run.setAllCaps(false);
+        Button clear = new Button(this); clear.setText("مسح"); clear.setAllCaps(false);
+        Button run = new Button(this); run.setText("تنفيذ"); run.setAllCaps(false);
         Button stop = new Button(this); stop.setText("إيقاف"); stop.setAllCaps(false);
-        actions.addView(voice,new LinearLayout.LayoutParams(dp(88),dp(48)));
+        actions.addView(clear,new LinearLayout.LayoutParams(dp(72),dp(48)));
         LinearLayout.LayoutParams runParams = new LinearLayout.LayoutParams(0,dp(48),1);
-        runParams.leftMargin=dp(5); actions.addView(run,runParams);
+        runParams.leftMargin=dp(6); actions.addView(run,runParams);
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(dp(76),dp(48));
-        stopParams.leftMargin=dp(5); actions.addView(stop,stopParams);
+        stopParams.leftMargin=dp(6); actions.addView(stop,stopParams);
         box.addView(actions);
-        voice.setOnClickListener(v -> {
-            Intent speech = new Intent(this, VoiceCaptureActivity.class);
-            speech.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(speech);
-        });
+        clear.setOnClickListener(v -> { command.setText(""); status.setText("تم مسح مربع الأوامر."); command.requestFocus(); });
         stop.setOnClickListener(v -> {
             PhoneControlService service = PhoneControlService.instance;
             if (service != null) service.stopSequence();
