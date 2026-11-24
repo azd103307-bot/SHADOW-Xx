@@ -54,9 +54,27 @@ public class PhoneControlService extends AccessibilityService {
         if (log.length() > 0) log.append("\n");
         log.append("• ").append(steps.get(index)).append(": ").append(result);
         callback.onUpdate(log.toString());
-        if (index + 1 < steps.size()) {
-            sequenceHandler.postDelayed(() -> runStep(steps, index + 1, log, callback), 900);
+        // Stop after a failed step to avoid acting on an unexpected screen.
+        if (isStepFailure(result)) {
+            log.append("\n⏹ توقفت السلسلة لحماية بقية الخطوات.");
+            callback.onUpdate(log.toString());
+            return;
         }
+        if (index + 1 < steps.size()) {
+            sequenceHandler.postDelayed(() -> runStep(steps, index + 1, log, callback), 1400);
+        }
+    }
+
+    private boolean isStepFailure(String result) {
+        return result.startsWith("لم أجد") ||
+               result.startsWith("تعذّر") ||
+               result.startsWith("لا أستطيع") ||
+               result.startsWith("لم أفهم") ||
+               result.startsWith("التطبيق الحالي لم يسمح");
+    }
+
+    public void stopSequence() {
+        sequenceHandler.removeCallbacksAndMessages(null);
     }
 
     public String execute(String raw) {
@@ -84,10 +102,10 @@ public class PhoneControlService extends AccessibilityService {
             String target = extractAfterVerb(normalized);
             return clickText(target);
         }
-        if (containsAny(lower, "مرر للاسفل", "انزل", "اسفل", "scroll down")) {
+        if (containsAny(lower, "مرر للاسفل", "مرر للأسفل", "انزل", "اسفل", "scroll down")) {
             return scroll(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
         }
-        if (containsAny(lower, "مرر للاعلى", "اصعد", "اعلى", "scroll up")) {
+        if (containsAny(lower, "مرر للاعلى", "مرر للأعلى", "اصعد", "اعلى", "scroll up")) {
             return scroll(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
         }
         return "لم أفهم هذا الجزء. جرّب: افتح يوتيوب، اكتب مرحباً، اضغط بحث، مرر للأسفل، أو ارجع.";
