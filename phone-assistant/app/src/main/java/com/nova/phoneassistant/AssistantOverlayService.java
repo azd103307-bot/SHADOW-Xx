@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.app.AlertDialog;
 
 public class AssistantOverlayService extends Service {
+    public static EditText activeCommandInput;
     private WindowManager wm;
     private View bubble;
     private View panel;
@@ -89,6 +90,7 @@ public class AssistantOverlayService extends Service {
         close.setOnClickListener(v -> { if(panel!=null){wm.removeView(panel);panel=null;} });
 
         EditText command = new EditText(this);
+        activeCommandInput = command;
         command.setHint("مثال: افتح يوتيوب");
         command.setTextColor(Color.WHITE); command.setHintTextColor(Color.LTGRAY);
         command.setTextSize(15); command.setMinLines(2); command.setGravity(Gravity.TOP|Gravity.RIGHT);
@@ -103,13 +105,20 @@ public class AssistantOverlayService extends Service {
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button voice = new Button(this); voice.setText("🎙 صوت"); voice.setAllCaps(false);
         Button run = new Button(this); run.setText("تنفيذ الأمر"); run.setAllCaps(false);
         Button stop = new Button(this); stop.setText("إيقاف"); stop.setAllCaps(false);
-        actions.addView(run,new LinearLayout.LayoutParams(0,dp(48),1));
-        LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(dp(92),dp(48));
-        stopParams.leftMargin = dp(8);
-        actions.addView(stop,stopParams);
+        actions.addView(voice,new LinearLayout.LayoutParams(dp(88),dp(48)));
+        LinearLayout.LayoutParams runParams = new LinearLayout.LayoutParams(0,dp(48),1);
+        runParams.leftMargin=dp(5); actions.addView(run,runParams);
+        LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(dp(76),dp(48));
+        stopParams.leftMargin=dp(5); actions.addView(stop,stopParams);
         box.addView(actions);
+        voice.setOnClickListener(v -> {
+            Intent speech = new Intent(this, VoiceCaptureActivity.class);
+            speech.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(speech);
+        });
         stop.setOnClickListener(v -> {
             PhoneControlService service = PhoneControlService.instance;
             if (service != null) service.stopSequence();
@@ -157,6 +166,7 @@ public class AssistantOverlayService extends Service {
     @Override public void onDestroy() {
         if(panel!=null) wm.removeView(panel);
         if(bubble!=null) wm.removeView(bubble);
+        activeCommandInput=null;
         panel=null; bubble=null; super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent) { return null; }
