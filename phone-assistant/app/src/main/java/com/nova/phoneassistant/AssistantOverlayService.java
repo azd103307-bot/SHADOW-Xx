@@ -157,9 +157,13 @@ public class AssistantOverlayService extends Service {
             .replace("ـ", "")
             .replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
             .replace("ى", "ي");
+        // Clearing only the current text field is local and does not need a warning.
+        if (x.trim().equals("امسح النص") || x.trim().equals("امسح الكتابة") ||
+            x.trim().equals("clear text")) return false;
+
         String[] words={
-            "ارسل","ارسال","ابعث","بعث","send","ارسال رسالة",
-            "احذف","حذف","امسح","ازالة","ازاله","remove","delete","trash",
+            "ارسل","ارسال","ابعث","بعث","وجه رسالة","send",
+            "احذف","حذف","امسح المحادثة","احذف المحادثة","ازالة","ازاله","remove","delete","trash",
             "شراء","اشتر","اشتري","اطلب","طلب","دفع","ادفع","سدد","تحويل","حول مبلغ",
             "payment","pay","purchase","buy","checkout","subscribe","اشتراك",
             "انشر","نشر","شارك","مشاركة","post","publish","share",
