@@ -37,7 +37,7 @@ public class PhoneControlService extends AccessibilityService {
             callback.onUpdate("اكتب أمراً أولاً.");
             return;
         }
-        String[] parts = raw.trim().split("\\s*(?:ثم|وبعدها|بعد ذلك|then|;|\\n)\\s*", -1);
+        String[] parts = raw.trim().split("\\s*(?:ثم|ثم بعدها|وبعدها|بعدها|بعد ذلك|then|;|\\n)\\s*", -1);
         List<String> steps = new ArrayList<>();
         for (String part : parts) if (!part.trim().isEmpty()) steps.add(part.trim());
         if (steps.isEmpty()) {
@@ -157,7 +157,10 @@ public class PhoneControlService extends AccessibilityService {
         else if (n.contains("كاميرا") || n.contains("camera")) pkg = "com.android.camera";
         else if (n.contains("رسائل") || n.contains("messages") || n.contains("الرسائل")) pkg = "com.google.android.apps.messaging";
         else if (n.contains("الهاتف") || n.contains("phone")) pkg = "com.google.android.dialer";
-        else if (n.contains("الملفات") || n.contains("مدير الملفات") || n.contains("files")) pkg = "com.google.android.documentsui";
+        else if (n.contains("الملفات") || n.contains("مدير الملفات") || n.contains("ملفاتي") || n.contains("files")) pkg = "com.google.android.documentsui";
+        else if (n.contains("متجر") || n.contains("بلاي") || n.contains("play store")) pkg = "com.android.vending";
+        else if (n.contains("سناب") || n.contains("snapchat")) pkg = "com.snapchat.android";
+        else if (n.contains("تيك توك") || n.contains("tiktok")) pkg = "com.zhiliaoapp.musically";
 
         PackageManager pm = getPackageManager();
         Intent intent = pkg == null ? pm.getLaunchIntentForPackage(name) : pm.getLaunchIntentForPackage(pkg);
