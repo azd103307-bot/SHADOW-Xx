@@ -13,10 +13,14 @@ import android.view.accessibility.AccessibilityEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PhoneControlService extends AccessibilityService {
     public static volatile PhoneControlService instance;
     private final Handler sequenceHandler = new Handler(Looper.getMainLooper());
+    private Runnable repeatRunnable;
+    private volatile boolean repeatCancelled = false;
 
     public interface SequenceCallback {
         void onUpdate(String message);
@@ -37,6 +41,7 @@ public class PhoneControlService extends AccessibilityService {
             callback.onUpdate("اكتب أمراً أولاً.");
             return;
         }
+        if (startBoundedRepeat(raw, callback)) return;
         String[] parts = raw.trim().split("\\s*(?:ثم|ثم بعدها|وبعدها|بعدها|بعد ذلك|then|;|\\n)\\s*", -1);
         List<String> steps = new ArrayList<>();
         for (String part : parts) if (!part.trim().isEmpty()) steps.add(part.trim());
@@ -76,7 +81,55 @@ public class PhoneControlService extends AccessibilityService {
                result.startsWith("التطبيق الحالي لم يسمح");
     }
 
+    private boolean startBoundedRepeat(String raw, SequenceCallback callback) {
+        String n = normalizeCommand(raw);
+        Pattern p = Pattern.compile("(?s).*?كرر.*?اكتب\\s+(.+?)\\s+(?:ثم\\s*)?ارسل\\s+(\\d+)\\s*(?:مرة|مرات|times).*", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(n);
+        if (!m.matches()) return false;
+        String value = m.group(1).trim();
+        int count;
+        try { count = Integer.parseInt(m.group(2)); } catch (Exception e) { return false; }
+        if (value.isEmpty() || count < 1 || count > 5) {
+            callback.onUpdate("حدد نصاً وعدداً من 1 إلى 5 مرات.");
+            return true;
+        }
+        repeatCancelled = false;
+        final int total = count;
+        final String text = value;
+        final int[] done = {0};
+        callback.onUpdate("بدأ التكرار: " + total + " مرات. افتح المحادثة المطلوبة أولاً.");
+        Runnable[] task = new Runnable[1];
+        task[0] = () -> {
+            if (repeatCancelled) {
+                callback.onUpdate("⏹ تم إيقاف التكرار. اكتمل " + done[0] + " من " + total + ".");
+                return;
+            }
+            String typed = typeText(text);
+            if (!typed.startsWith("تمت كتابة")) {
+                callback.onUpdate("توقف التكرار: " + typed);
+                return;
+            }
+            String sent = clickText("إرسال");
+            if (!sent.startsWith("تم الضغط")) sent = clickText("Send");
+            if (!sent.startsWith("تم الضغط")) {
+                callback.onUpdate("توقف التكرار لأن زر الإرسال لم يُعثر عليه.");
+                return;
+            }
+            done[0]++;
+            callback.onUpdate("تم الإرسال " + done[0] + " من " + total + ".");
+            if (done[0] < total && !repeatCancelled) {
+                repeatRunnable = task[0];
+                sequenceHandler.postDelayed(repeatRunnable, 3000);
+            } else callback.onUpdate("اكتمل التكرار: " + done[0] + " من " + total + ".");
+        };
+        repeatRunnable = task[0];
+        sequenceHandler.post(task[0]);
+        return true;
+    }
+
     public void stopSequence() {
+        repeatCancelled = true;
+        if (repeatRunnable != null) sequenceHandler.removeCallbacks(repeatRunnable);
         sequenceHandler.removeCallbacksAndMessages(null);
     }
 
