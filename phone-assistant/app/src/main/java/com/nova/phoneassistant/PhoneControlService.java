@@ -83,8 +83,8 @@ public class PhoneControlService extends AccessibilityService {
 
     private boolean startBoundedRepeat(String raw, SequenceCallback callback) {
         String n = normalizeCommand(raw);
-        Pattern p = Pattern.compile("(?s).*?كرر.*?اكتب\\s+(.+?)\\s+(?:ثم\\s*)?ارسل\\s+(\\d+)\\s*(?:مرة|مرات|times).*", Pattern.CASE_INSENSITIVE);
-        Matcher m = p.matcher(n);
+        Pattern p = Pattern.compile("(?s).*?كرر.*?اكتب\\s+(.+?)\\s+(?:(?:ثم\\s*)|(?:و))?(?:أرسل|ارسل|send)\\s+(\\d+)\\s*(?:مرة|مرات|times).*", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(raw);
         if (!m.matches()) return false;
         String value = m.group(1).trim();
         int count;
