@@ -48,9 +48,9 @@ public class AssistantOverlayService extends Service {
     private void showBubble() {
         if (bubble != null) return;
         TextView b = new TextView(this);
-        b.setText("N");
+        b.setText("🤖");
         b.setTextColor(Color.WHITE);
-        b.setTextSize(21);
+        b.setTextSize(27);
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setGravity(Gravity.CENTER);
         b.setBackground(shape(Color.rgb(105,82,220), 40));
@@ -157,9 +157,9 @@ public class AssistantOverlayService extends Service {
             .replace("ـ", "")
             .replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
             .replace("ى", "ي");
-        // A narrowly defined, finite repeat command is explicitly user-authorized.
-        // The controller enforces a maximum of five sends and a three-second interval.
-        if (x.matches("(?s).*?كرر.*?اكتب\\s+.+?\\s+ارسل\\s+[1-5]\\s*(مرة|مرات).*")) return false;
+        // Only the exact, bounded repeat syntax bypasses per-send confirmation.
+        // The controller independently limits this to five sends in messaging apps.
+        if (x.matches("^كرر(?:\\s+عملية)?\\s+اكتب\\s+.+?\\s+(?:ثم\\s*)?و?ارسل\\s+[1-5]\\s*(?:مرة|مرات)$")) return false;
 
         // Clearing only the current text field is local and does not need a warning.
         if (x.trim().equals("امسح النص") || x.trim().equals("امسح الكتابة") ||
