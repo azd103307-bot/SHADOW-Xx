@@ -7,7 +7,7 @@ const loadStatus = $("loadStatus"), statusEl = $("status");
 const loadProgress = $("loadProgress"), genProgress = $("genProgress");
 const deviceEl = $("device"), img = $("result"), placeholder = $("placeholder");
 const download = $("download"), again = $("again");
-let client = null, loaded = false, currentUrl = "";
+let client = null, loaded = false, currentUrl = "", gpuAdapterInfo = "";
 
 function progressText(p = {}) {
   const parts = [];
@@ -20,22 +20,59 @@ function progressText(p = {}) {
   return parts.join(" · ") || "جارٍ تجهيز النموذج...";
 }
 
+// وجود navigator.gpu وحده لا يعني أن الهاتف يستطيع إنشاء جهاز GPU.
+// نختبر إنشاء Adapter وDevice فعلياً قبل تنزيل ملفات النموذج الكبيرة.
+async function getWorkingGpu() {
+  if (!window.isSecureContext) {
+    throw new Error("يلزم فتح NOVA عبر HTTPS آمن.");
+  }
+  if (!navigator.gpu) {
+    throw new Error("هذا المتصفح لا يوفّر WebGPU. حدّث Chrome أو جرّب متصفحاً وجهازاً يدعمان WebGPU.");
+  }
+
+  let adapter = null;
+  try {
+    adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  } catch {}
+  if (!adapter) {
+    try { adapter = await navigator.gpu.requestAdapter(); } catch {}
+  }
+  if (!adapter) {
+    throw new Error("المتصفح لا يستطيع الوصول إلى معالج رسوميات متوافق. فعّل تسريع الرسوميات إن كان متاحاً، ثم أعد تشغيل المتصفح. لن يبدأ تنزيل النموذج قبل حل المشكلة.");
+  }
+
+  let device;
+  try {
+    device = await adapter.requestDevice();
+  } catch (error) {
+    throw new Error("تم العثور على GPU لكن تعذّر إنشاء جهاز تشغيل: " + (error?.message || "رفض المتصفح الوصول إلى GPU") + ". أغلق التطبيقات الثقيلة وأعد تشغيل Chrome.");
+  }
+
+  const info = adapter.info || {};
+  gpuAdapterInfo = [info.vendor, info.architecture, info.device].filter(Boolean).join(" ") || "متصل";
+  const lostPromise = device.lost;
+  device.destroy();
+
+  // إذا فُقد الجهاز فور إنشائه، نعرض تشخيصاً واضحاً بدلاً من بدء تنزيل غير مفيد.
+  const lost = await Promise.race([
+    lostPromise.then((reason) => reason),
+    new Promise((resolve) => setTimeout(() => resolve(null), 150))
+  ]);
+  if (lost) {
+    throw new Error("اتصال GPU انقطع أثناء الفحص. أعد تشغيل المتصفح وتأكد من عدم تفعيل وضع توفير الطاقة.");
+  }
+  return adapter;
+}
+
 async function inspectDevice() {
   const secure = window.isSecureContext;
-  const hasGpu = !!navigator.gpu;
   deviceEl.textContent = "الاتصال الآمن: " + (secure ? "متاح" : "غير متاح") +
-    " · WebGPU: " + (hasGpu ? "متاح مبدئياً" : "غير مدعوم في هذا المتصفح");
-  if (!secure) deviceEl.textContent += " · افتح الموقع عبر HTTPS.";
-  if (hasGpu) {
-    try {
-      const adapter = await navigator.gpu.requestAdapter();
-      if (!adapter) throw new Error("لم يتم العثور على معالج رسوميات متوافق");
-      const info = adapter.info || {};
-      const label = [info.vendor, info.architecture].filter(Boolean).join(" ");
-      if (label) deviceEl.textContent += " · GPU: " + label;
-    } catch (e) {
-      deviceEl.textContent += " · تعذّر الوصول إلى GPU.";
-    }
+    " · فحص WebGPU الحقيقي...";
+  try {
+    await getWorkingGpu();
+    deviceEl.textContent = "الاتصال الآمن: متاح · WebGPU: يعمل · GPU: " + gpuAdapterInfo;
+  } catch (error) {
+    deviceEl.textContent = "WebGPU: غير جاهز · " + error.message;
   }
 }
 inspectDevice();
@@ -45,28 +82,36 @@ loadBtn.addEventListener("click", async () => {
   loadBtn.disabled = true;
   loadProgress.hidden = false;
   loadProgress.value = 0;
-  loadStatus.textContent = "جارٍ التحقق من دعم WebGPU...";
+  loadStatus.textContent = "يتم اختبار معالج الرسوميات قبل تنزيل النموذج...";
   try {
-    if (!window.isSecureContext) throw new Error("يلزم فتح الموقع عبر اتصال HTTPS آمن.");
-    if (!navigator.gpu) throw new Error("هذا المتصفح لا يدعم WebGPU. جرّب Chrome محدثاً على جهاز متوافق.");
+    await getWorkingGpu();
+
     client = Txt2ImgWorkerClient.createDefault();
     const caps = await client.detect();
-    if (!caps.webgpu) throw new Error("WebGPU غير متاح على هذا الجهاز.");
-    loadStatus.textContent = "يتم تنزيل نموذج SD-Turbo لأول مرة. الحجم التقريبي 2.3 جيجابايت؛ لا تغلق الصفحة أثناء التنزيل.";
+    if (!caps?.webgpu) {
+      throw new Error("فحص مكتبة التوليد لم يجد WebGPU صالحاً، رغم نجاح اختبار المتصفح. حدّث Chrome وأعد المحاولة.");
+    }
+
+    loadStatus.textContent = "نجح فحص GPU. يبدأ الآن تنزيل نموذج SD-Turbo (حوالي 2.3 جيجابايت). استخدم Wi‑Fi ولا تغلق الصفحة.";
     const result = await client.load("sd-turbo", { backendPreference: ["webgpu"] }, (p) => {
       if (typeof p.pct === "number") loadProgress.value = p.pct;
       loadStatus.textContent = progressText(p);
     });
     if (!result?.ok) throw new Error(result?.message || "تعذر تحميل النموذج.");
+
     loaded = true;
     loadProgress.value = 100;
-    loadStatus.textContent = "✓ النموذج جاهز. سيحاول المتصفح الاحتفاظ بملفاته محلياً.";
+    loadStatus.textContent = "✓ النموذج جاهز. يمكنك الآن إنشاء الصور.";
     loadBtn.textContent = "✓ النموذج جاهز على هذا الجهاز";
     goBtn.disabled = false;
   } catch (e) {
     loadStatus.textContent = e?.message || "حدث خطأ أثناء تحميل النموذج.";
     loadBtn.disabled = false;
-    if (client) { try { await client.unload(); } catch {} client = null; }
+    loadProgress.value = 0;
+    if (client) {
+      try { await client.unload(); } catch {}
+      client = null;
+    }
   }
 });
 
@@ -74,6 +119,7 @@ async function generate() {
   const prompt = promptEl.value.trim();
   if (!prompt) { statusEl.textContent = "اكتب وصف الصورة أولاً."; promptEl.focus(); return; }
   if (!loaded || !client) { statusEl.textContent = "حمّل النموذج أولاً."; return; }
+
   goBtn.disabled = true;
   again.disabled = true;
   genProgress.hidden = false;
@@ -88,7 +134,9 @@ async function generate() {
       else genProgress.removeAttribute("value");
     });
     const result = await task.promise;
-    if (!result?.ok || !result.blob) throw new Error(result?.message || result?.reason || "فشل إنشاء الصورة.");
+    if (!result?.ok || !result.blob) {
+      throw new Error(result?.message || result?.reason || "فشل إنشاء الصورة.");
+    }
     if (currentUrl) URL.revokeObjectURL(currentUrl);
     currentUrl = URL.createObjectURL(result.blob);
     img.src = currentUrl;
