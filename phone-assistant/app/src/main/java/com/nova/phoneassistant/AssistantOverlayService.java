@@ -151,8 +151,21 @@ public class AssistantOverlayService extends Service {
     }
 
     private boolean isSensitive(String s) {
-        String x=s.toLowerCase();
-        String[] words={"ارسل","أرسل","ارسال","إرسال","send","احذف","حذف","delete","شراء","اشتر","دفع","ادفع","payment","pay","انشر","نشر","post","اتصل","اتصال","call"};
+        // Normalize Arabic spelling/diacritics so alternate forms cannot bypass confirmation.
+        String x=s.toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("[\\u064B-\\u065F\\u0670]", "")
+            .replace("ـ", "")
+            .replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+            .replace("ى", "ي");
+        String[] words={
+            "ارسل","ارسال","ابعث","بعث","send","ارسال رسالة",
+            "احذف","حذف","امسح","ازالة","ازاله","remove","delete","trash",
+            "شراء","اشتر","اشتري","اطلب","طلب","دفع","ادفع","سدد","تحويل","حول مبلغ",
+            "payment","pay","purchase","buy","checkout","subscribe","اشتراك",
+            "انشر","نشر","شارك","مشاركة","post","publish","share",
+            "اتصل","اتصال","كلم","مكالمة","call","dial",
+            "الغاء","الغ","cancel"
+        };
         for(String w:words) if(x.contains(w)) return true;
         return false;
     }
