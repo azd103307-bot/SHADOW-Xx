@@ -82,7 +82,7 @@ public class PhoneControlService extends AccessibilityService {
     public String execute(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "اكتب أمراً أولاً.";
         String normalized = raw.trim();
-        String lower = normalized.toLowerCase(Locale.ROOT);
+        String lower = normalizeCommand(normalized);
 
         if (containsAny(lower, "افتح", "شغل", "اذهب الى", "اذهب إلى", "انتقل الى", "انتقل إلى", "open ")) {
             String app = extractAfterVerb(normalized);
@@ -119,6 +119,14 @@ public class PhoneControlService extends AccessibilityService {
         return "لم أفهم هذا الجزء. جرّب: افتح يوتيوب، اكتب مرحباً، اضغط بحث، مرر للأسفل، أو ارجع.";
     }
 
+    private String normalizeCommand(String value) {
+        return value.toLowerCase(Locale.ROOT)
+            .replaceAll("[\\u064B-\\u065F\\u0670]", "")
+            .replace("ـ", "")
+            .replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+            .replace("ى", "ي");
+    }
+
     private boolean containsAny(String s, String... terms) {
         for (String term : terms) if (s.contains(term)) return true;
         return false;
@@ -126,7 +134,7 @@ public class PhoneControlService extends AccessibilityService {
 
     private String extractAfterVerb(String s) {
         String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اكتب في","دوّن","أضف","اضف","append","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
-        String lower = s.toLowerCase(Locale.ROOT);
+        String lower = normalizeCommand(s);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
             if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى|تطبيق|في خانة الكتابة|في مربع النص)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
@@ -135,7 +143,7 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String launchApp(String name) {
-        String n = name.replaceAll("[.!؟?]","").trim().toLowerCase(Locale.ROOT);
+        String n = normalizeCommand(name.replaceAll("[.!؟?]","").trim());
         String pkg = null;
         if (n.contains("واتساب") || n.contains("whatsapp")) pkg = "com.whatsapp";
         else if (n.contains("يوتيوب") || n.contains("youtube")) pkg = "com.google.android.youtube";
@@ -216,9 +224,9 @@ public class PhoneControlService extends AccessibilityService {
         if (node == null) return null;
         CharSequence t = node.getText();
         CharSequence d = node.getContentDescription();
-        String q = target.trim().toLowerCase(Locale.ROOT);
-        if ((t != null && t.toString().toLowerCase(Locale.ROOT).contains(q)) ||
-            (d != null && d.toString().toLowerCase(Locale.ROOT).contains(q))) return node;
+        String q = normalizeCommand(target.trim());
+        if ((t != null && normalizeCommand(t.toString()).contains(q)) ||
+            (d != null && normalizeCommand(d.toString()).contains(q))) return node;
         for (int i=0;i<node.getChildCount();i++) {
             AccessibilityNodeInfo found = findText(node.getChild(i), target);
             if (found != null) return found;
