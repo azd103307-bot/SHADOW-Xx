@@ -1,0 +1,13 @@
+{
+  "name": "NOVA AI STUDIO",
+  "short_name": "NOVA",
+  "description": "توليد الصور محلياً داخل المتصفح",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090b16",
+  "theme_color": "#090b16",
+  "icons": []
+}
