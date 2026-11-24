@@ -157,6 +157,10 @@ public class AssistantOverlayService extends Service {
             .replace("ـ", "")
             .replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
             .replace("ى", "ي");
+        // A narrowly defined, finite repeat command is explicitly user-authorized.
+        // The controller enforces a maximum of five sends and a three-second interval.
+        if (x.matches("(?s).*?كرر.*?اكتب\\s+.+?\\s+ارسل\\s+[1-5]\\s*(مرة|مرات).*")) return false;
+
         // Clearing only the current text field is local and does not need a warning.
         if (x.trim().equals("امسح النص") || x.trim().equals("امسح الكتابة") ||
             x.trim().equals("clear text")) return false;
