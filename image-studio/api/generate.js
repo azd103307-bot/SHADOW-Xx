@@ -3,14 +3,14 @@ export default async function handler(req, res) {
   const key = process.env.POLLINATIONS_API_KEY;
   if (!key) return res.status(503).json({ error: "لم يتم ربط مفتاح خدمة توليد الصور بعد. أضف POLLINATIONS_API_KEY في إعدادات Vercel." });
   try {
-    const { prompt, style = "", width = 1024, height = 1024 } = req.body || {};
+    const { prompt, style = "", width = 1024, height = 1024, quality = "standard" } = req.body || {};
     if (typeof prompt !== "string" || !prompt.trim()) return res.status(400).json({ error: "اكتب وصف الصورة أولاً." });
     if (prompt.length > 1200) return res.status(400).json({ error: "الوصف طويل جداً." });
     const allowed = new Set(["1024x1024", "1024x1536", "1536x1024"]);
     const size = `${Number(width)}x${Number(height)}`;
     if (!allowed.has(size)) return res.status(400).json({ error: "أبعاد الصورة غير مدعومة." });
     const fullPrompt = [prompt.trim(), style ? `Art style: ${style}` : ""].filter(Boolean).join(", ");
-    const model = "black-forest-labs/flux.1-schnell";
+    const model = quality === "high" ? "black-forest-labs/flux.2-pro" : "black-forest-labs/flux.1-schnell";
     const url = `https://gen.pollinations.ai/image/${encodeURIComponent(fullPrompt)}?model=${encodeURIComponent(model)}&width=${width}&height=${height}`;
     const upstream = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
     if (!upstream.ok) {
