@@ -82,7 +82,7 @@ public class PhoneControlService extends AccessibilityService {
         String normalized = raw.trim();
         String lower = normalized.toLowerCase(Locale.ROOT);
 
-        if (containsAny(lower, "افتح", "شغل", "اذهب الى", "انتقل الى", "open ")) {
+        if (containsAny(lower, "افتح", "شغل", "اذهب الى", "اذهب إلى", "انتقل الى", "انتقل إلى", "open ")) {
             String app = extractAfterVerb(normalized);
             return launchApp(app);
         }
@@ -121,7 +121,7 @@ public class PhoneControlService extends AccessibilityService {
         String lower = s.toLowerCase(Locale.ROOT);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
-            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى)\\s*", "").trim();
+            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى|تطبيق)\\s*", "").trim();
         }
         return s.trim();
     }
@@ -136,6 +136,12 @@ public class PhoneControlService extends AccessibilityService {
         else if (n.contains("فيسبوك") || n.contains("facebook")) pkg = "com.facebook.katana";
         else if (n.contains("انستغرام") || n.contains("instagram")) pkg = "com.instagram.android";
         else if (n.contains("الإعدادات") || n.contains("الاعدادات") || n.contains("settings")) pkg = "com.android.settings";
+        else if (n.contains("خرائط") || n.contains("maps") || n.contains("الخريطة")) pkg = "com.google.android.apps.maps";
+        else if (n.contains("جيميل") || n.contains("gmail") || n.contains("البريد")) pkg = "com.google.android.gm";
+        else if (n.contains("كاميرا") || n.contains("camera")) pkg = "com.android.camera";
+        else if (n.contains("رسائل") || n.contains("messages") || n.contains("الرسائل")) pkg = "com.google.android.apps.messaging";
+        else if (n.contains("الهاتف") || n.contains("phone")) pkg = "com.google.android.dialer";
+        else if (n.contains("الملفات") || n.contains("مدير الملفات") || n.contains("files")) pkg = "com.google.android.documentsui";
 
         PackageManager pm = getPackageManager();
         Intent intent = pkg == null ? pm.getLaunchIntentForPackage(name) : pm.getLaunchIntentForPackage(pkg);
