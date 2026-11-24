@@ -5,16 +5,59 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class PhoneControlService extends AccessibilityService {
     public static volatile PhoneControlService instance;
+    private final Handler sequenceHandler = new Handler(Looper.getMainLooper());
+
+    public interface SequenceCallback {
+        void onUpdate(String message);
+    }
 
     @Override public void onServiceConnected() { instance = this; }
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {}
     @Override public void onInterrupt() { }
-    @Override public void onDestroy() { if (instance == this) instance = null; super.onDestroy(); }
+    @Override public void onDestroy() {
+        sequenceHandler.removeCallbacksAndMessages(null);
+        if (instance == this) instance = null;
+        super.onDestroy();
+    }
+
+    // ينفذ الأوامر واحداً بعد الآخر مع مهلة قصيرة لانتقال التطبيق أو تحديث الشاشة.
+    public void executeSequence(String raw, SequenceCallback callback) {
+        if (raw == null || raw.trim().isEmpty()) {
+            callback.onUpdate("اكتب أمراً أولاً.");
+            return;
+        }
+        String[] parts = raw.trim().split("\\s*(?:ثم|وبعدها|بعد ذلك|then|;|\\n)\\s*", -1);
+        List<String> steps = new ArrayList<>();
+        for (String part : parts) if (!part.trim().isEmpty()) steps.add(part.trim());
+        if (steps.isEmpty()) {
+            callback.onUpdate("اكتب أمراً واضحاً.");
+            return;
+        }
+        runStep(steps, 0, new StringBuilder(), callback);
+    }
+
+    private void runStep(List<String> steps, int index, StringBuilder log, SequenceCallback callback) {
+        if (index >= steps.size()) {
+            callback.onUpdate(log.toString().trim());
+            return;
+        }
+        String result = execute(steps.get(index));
+        if (log.length() > 0) log.append("\\n");
+        log.append("• ").append(steps.get(index)).append(": ").append(result);
+        callback.onUpdate(log.toString());
+        if (index + 1 < steps.size()) {
+            sequenceHandler.postDelayed(() -> runStep(steps, index + 1, log, callback), 900);
+        }
+    }
 
     public String execute(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "اكتب أمراً أولاً.";
@@ -47,7 +90,7 @@ public class PhoneControlService extends AccessibilityService {
         if (containsAny(lower, "مرر للاعلى", "اصعد", "اعلى", "scroll up")) {
             return scroll(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
         }
-        return "لم أفهم الأمر بعد. جرّب: افتح يوتيوب، اكتب مرحباً، اضغط بحث، مرر للأسفل، أو ارجع.";
+        return "لم أفهم هذا الجزء. جرّب: افتح يوتيوب، اكتب مرحباً، اضغط بحث، مرر للأسفل، أو ارجع.";
     }
 
     private boolean containsAny(String s, String... terms) {
@@ -56,7 +99,7 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String extractAfterVerb(String s) {
-        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","افتح","شغل","اكتب النص","اكتب","اضغط على","اضغط","انقر على","انقر","اختار","اختر","tap","open","type"};
+        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
         String lower = s.toLowerCase(Locale.ROOT);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
@@ -78,7 +121,7 @@ public class PhoneControlService extends AccessibilityService {
 
         PackageManager pm = getPackageManager();
         Intent intent = pkg == null ? pm.getLaunchIntentForPackage(name) : pm.getLaunchIntentForPackage(pkg);
-        if (intent == null) return "لم أجد التطبيق: " + name + ". جرّب اسمه المعروف مثل واتساب أو يوتيوب أو كروم.";
+        if (intent == null) return "لم أجد التطبيق: " + name + ". تأكد من تثبيته.";
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         return "جارٍ فتح " + name;
@@ -88,10 +131,8 @@ public class PhoneControlService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return "لا أستطيع الوصول إلى الشاشة الحالية.";
         AccessibilityNodeInfo field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (field == null || !field.isEditable()) {
-            field = findEditable(root);
-        }
-        if (field == null) return "لم أجد خانة كتابة. اضغط أولاً داخل خانة النص ثم أعد الأمر.";
+        if (field == null || !field.isEditable()) field = findEditable(root);
+        if (field == null) return "لم أجد خانة كتابة. اضغط داخل خانة النص ثم أعد الأمر.";
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         boolean ok = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
