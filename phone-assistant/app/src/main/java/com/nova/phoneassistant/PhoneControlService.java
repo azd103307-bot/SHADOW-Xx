@@ -72,6 +72,7 @@ public class PhoneControlService extends AccessibilityService {
                result.startsWith("تعذّر") ||
                result.startsWith("لا أستطيع") ||
                result.startsWith("لم أفهم") ||
+               result.startsWith("وجدت العنصر لكن تعذّر") ||
                result.startsWith("التطبيق الحالي لم يسمح");
     }
 
