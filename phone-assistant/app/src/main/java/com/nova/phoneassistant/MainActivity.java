@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.rgb(12,16,31));
 
         TextView title = new TextView(this);
-        title.setText("NOVA  مساعد الهاتف");
+        title.setText("NOVA 🤖  مساعد الهاتف");
         title.setTextColor(Color.WHITE);
         title.setTextSize(25);
         title.setGravity(Gravity.CENTER);
