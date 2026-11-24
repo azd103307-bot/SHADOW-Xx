@@ -3,6 +3,8 @@ package com.nova.phoneassistant;
 import android.accessibilityservice.AccessibilityService;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.content.Intent;
+import android.content.ClipboardManager;
+import android.content.ClipData;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -94,6 +96,12 @@ public class PhoneControlService extends AccessibilityService {
             performGlobalAction(GLOBAL_ACTION_HOME);
             return "تم الانتقال إلى الشاشة الرئيسية.";
         }
+        if (containsAny(lower, "امسح النص", "امسح الكتابة", "clear text")) {
+            return typeText("");
+        }
+        if (containsAny(lower, "أضف", "اضف", "append ")) {
+            return appendText(extractAfterVerb(normalized));
+        }
         if (containsAny(lower, "اكتب", "دوّن", "type ")) {
             String text = extractAfterVerb(normalized);
             return typeText(text);
@@ -117,7 +125,7 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String extractAfterVerb(String s) {
-        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اكتب في","دوّن","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
+        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اكتب في","دوّن","أضف","اضف","append","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
         String lower = s.toLowerCase(Locale.ROOT);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
@@ -160,7 +168,27 @@ public class PhoneControlService extends AccessibilityService {
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         boolean ok = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-        return ok ? "تمت كتابة النص." : "التطبيق الحالي لم يسمح بالكتابة في هذه الخانة.";
+        if (!ok && !text.isEmpty()) {
+            try {
+                ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                clipboard.setPrimaryClip(ClipData.newPlainText("NOVA", text));
+                ok = field.performAction(AccessibilityNodeInfo.ACTION_FOCUS) &&
+                     field.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+            } catch (Exception ignored) { }
+        }
+        return ok ? (text.isEmpty() ? "تم مسح النص من الخانة." : "تمت كتابة النص.") :
+            "التطبيق الحالي لم يسمح بالكتابة في هذه الخانة.";
+    }
+
+    private String appendText(String extra) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return "لا أستطيع الوصول إلى الشاشة الحالية.";
+        AccessibilityNodeInfo field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (field == null || !field.isEditable()) field = findEditable(root);
+        if (field == null) return "لم أجد خانة كتابة. اضغط داخل خانة النص ثم أعد الأمر.";
+        CharSequence current = field.getText();
+        String combined = (current == null ? "" : current.toString()) + extra;
+        return typeText(combined);
     }
 
     private AccessibilityNodeInfo findEditable(AccessibilityNodeInfo node) {
