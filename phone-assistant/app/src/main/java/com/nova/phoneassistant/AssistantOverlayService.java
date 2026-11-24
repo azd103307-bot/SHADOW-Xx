@@ -101,8 +101,20 @@ public class AssistantOverlayService extends Service {
         status.setTextColor(Color.rgb(185,198,225)); status.setTextSize(12);
         status.setPadding(dp(2),dp(9),dp(2),dp(8)); box.addView(status);
 
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
         Button run = new Button(this); run.setText("تنفيذ الأمر"); run.setAllCaps(false);
-        box.addView(run,new LinearLayout.LayoutParams(-1,dp(48)));
+        Button stop = new Button(this); stop.setText("إيقاف"); stop.setAllCaps(false);
+        actions.addView(run,new LinearLayout.LayoutParams(0,dp(48),1));
+        LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(dp(92),dp(48));
+        stopParams.leftMargin = dp(8);
+        actions.addView(stop,stopParams);
+        box.addView(actions);
+        stop.setOnClickListener(v -> {
+            PhoneControlService service = PhoneControlService.instance;
+            if (service != null) service.stopSequence();
+            status.setText("تم إيقاف تنفيذ الخطوات المتبقية.");
+        });
         run.setOnClickListener(v -> {
             String text=command.getText().toString().trim();
             if (text.isEmpty()) { status.setText("اكتب أمراً أولاً."); return; }
