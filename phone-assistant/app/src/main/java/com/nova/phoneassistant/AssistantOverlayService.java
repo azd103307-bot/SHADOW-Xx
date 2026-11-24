@@ -118,6 +118,7 @@ public class AssistantOverlayService extends Service {
 
         panel=box;
         LayoutParams pp=params(-1, -2, Gravity.CENTER);
+        pp.flags = LayoutParams.FLAG_LAYOUT_IN_SCREEN;
         pp.width=getResources().getDisplayMetrics().widthPixels-dp(28);
         pp.gravity=Gravity.CENTER;
         wm.addView(panel,pp);
