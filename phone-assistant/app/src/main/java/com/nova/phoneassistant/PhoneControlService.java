@@ -51,7 +51,7 @@ public class PhoneControlService extends AccessibilityService {
             return;
         }
         String result = execute(steps.get(index));
-        if (log.length() > 0) log.append("\\n");
+        if (log.length() > 0) log.append("\n");
         log.append("• ").append(steps.get(index)).append(": ").append(result);
         callback.onUpdate(log.toString());
         if (index + 1 < steps.size()) {
