@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <queries><intent><action android:name="android.speech.action.RECOGNIZE_SPEECH"/></intent></queries>
     <application
         android:allowBackup="false"
         android:label="NOVA مساعد الهاتف"
@@ -12,6 +13,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".VoiceCaptureActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
         <service
             android:name=".AssistantOverlayService"
             android:exported="false"/>
