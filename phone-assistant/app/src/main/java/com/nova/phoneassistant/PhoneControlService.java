@@ -82,15 +82,19 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private boolean startBoundedRepeat(String raw, SequenceCallback callback) {
-        String n = normalizeCommand(raw);
-        Pattern p = Pattern.compile("(?s).*?كرر.*?اكتب\\s+(.+?)\\s+(?:(?:ثم\\s*)|(?:و))?(?:أرسل|ارسل|send)\\s+(\\d+)\\s*(?:مرة|مرات|times).*", Pattern.CASE_INSENSITIVE);
-        Matcher m = p.matcher(raw);
+        String normalized = normalizeCommand(raw).trim();
+        Pattern repeatPattern = Pattern.compile("^كرر(?:\\s+عملية)?\\s+اكتب\\s+(.+?)\\s+(?:ثم\\s*)?و?ارسل\\s+(\\d+)\\s*(?:مرة|مرات|times)$", Pattern.CASE_INSENSITIVE);
+        Matcher m = repeatPattern.matcher(normalized);
         if (!m.matches()) return false;
         String value = m.group(1).trim();
         int count;
         try { count = Integer.parseInt(m.group(2)); } catch (Exception e) { return false; }
         if (value.isEmpty() || count < 1 || count > 5) {
-            callback.onUpdate("حدد نصاً وعدداً من 1 إلى 5 مرات.");
+            callback.onUpdate("حدد نصاً وعدداً من 1 إلى 5 مرات فقط.");
+            return true;
+        }
+        if (!isSupportedMessagingScreen()) {
+            callback.onUpdate("افتح محادثة في واتساب أو تيليجرام أو تطبيق الرسائل أولاً، ثم أعد أمر التكرار.");
             return true;
         }
         repeatCancelled = false;
@@ -125,6 +129,16 @@ public class PhoneControlService extends AccessibilityService {
         repeatRunnable = task[0];
         sequenceHandler.post(task[0]);
         return true;
+    }
+
+    private boolean isSupportedMessagingScreen() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || root.getPackageName() == null) return false;
+        String pkg = root.getPackageName().toString();
+        return pkg.equals("com.whatsapp") ||
+               pkg.equals("org.telegram.messenger") ||
+               pkg.equals("com.google.android.apps.messaging") ||
+               pkg.equals("com.android.mms");
     }
 
     public void stopSequence() {
