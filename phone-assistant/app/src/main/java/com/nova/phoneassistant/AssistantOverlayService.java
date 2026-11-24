@@ -12,6 +12,8 @@ import android.view.WindowManager;
 import android.view.View;
 import android.view.MotionEvent;
 import android.view.WindowManager.LayoutParams;
+import android.view.inputmethod.InputMethodManager;
+import android.content.Context;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -95,6 +97,13 @@ public class AssistantOverlayService extends Service {
         command.setTextColor(Color.WHITE); command.setHintTextColor(Color.LTGRAY);
         command.setTextSize(16); command.setMinLines(3); command.setMaxLines(5); command.setGravity(Gravity.TOP|Gravity.RIGHT); command.setSingleLine(false);
         command.setBackground(shape(Color.rgb(35,44,69),14));
+        command.setFocusable(true);
+        command.setFocusableInTouchMode(true);
+        command.setOnClickListener(v -> {
+            command.requestFocus();
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(command, InputMethodManager.SHOW_IMPLICIT);
+        });
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1,dp(94));
         cp.topMargin=dp(10); box.addView(command,cp);
 
