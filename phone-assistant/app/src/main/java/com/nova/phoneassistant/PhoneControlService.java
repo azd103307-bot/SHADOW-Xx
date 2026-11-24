@@ -84,15 +84,15 @@ public class PhoneControlService extends AccessibilityService {
         String normalized = raw.trim();
         String lower = normalizeCommand(normalized);
 
-        if (containsAny(lower, "افتح", "شغل", "اذهب الى", "اذهب إلى", "انتقل الى", "انتقل إلى", "open ")) {
+        if (containsAny(lower, "افتح", "شغل", "اذهب الى", "اذهب إلى", "انتقل الى", "انتقل إلى", "روح الى", "روح على", "قم بفتح", "open ", "launch ")) {
             String app = extractAfterVerb(normalized);
             return launchApp(app);
         }
-        if (containsAny(lower, "ارجع", "عودة", "رجوع", "back")) {
+        if (containsAny(lower, "ارجع", "عودة", "رجوع", "عد للخلف", "تراجع", "back")) {
             performGlobalAction(GLOBAL_ACTION_BACK);
             return "تم تنفيذ الرجوع.";
         }
-        if (containsAny(lower, "الشاشة الرئيسية", "الرئيسية", "اذهب للرئيسية", "home")) {
+        if (containsAny(lower, "الشاشة الرئيسية", "الرئيسية", "اذهب للرئيسية", "انتقل للرئيسية", "home")) {
             performGlobalAction(GLOBAL_ACTION_HOME);
             return "تم الانتقال إلى الشاشة الرئيسية.";
         }
@@ -102,11 +102,11 @@ public class PhoneControlService extends AccessibilityService {
         if (containsAny(lower, "أضف", "اضف", "append ")) {
             return appendText(extractAfterVerb(normalized));
         }
-        if (containsAny(lower, "اكتب", "دوّن", "type ")) {
+        if (containsAny(lower, "اكتب", "دوّن", "ادخل النص", "املأ", "عبئ", "type ")) {
             String text = extractAfterVerb(normalized);
             return typeText(text);
         }
-        if (containsAny(lower, "اضغط", "انقر", "اختار", "اختر", "tap ")) {
+        if (containsAny(lower, "اضغط", "انقر", "اختار", "اختر", "حدد", "المس", "tap ", "click ")) {
             String target = extractAfterVerb(normalized);
             return clickText(target);
         }
