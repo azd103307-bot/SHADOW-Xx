@@ -320,8 +320,14 @@ public class PhoneControlService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return "لا أستطيع الوصول إلى الشاشة الحالية.";
         AccessibilityNodeInfo field = findSearchEditable(root);
-        if (field == null) field = findEditable(root);
-        if (field == null) return "لم أجد خانة بحث أو كتابة في هذه الشاشة.";
+        if (field == null) {
+            String opened = clickText("بحث");
+            if (!opened.startsWith("تم الضغط")) opened = clickText("Search");
+            if (opened.startsWith("تم الضغط")) {
+                return "لم أجد خانة البحث بعد؛ فتحت زر البحث وسأعيد المحاولة.";
+            }
+            return "لم أجد خانة بحث واضحة في هذه الشاشة. لم أكتب في أي حقل آخر حفاظاً على بياناتك.";
+        }
         field.performAction(AccessibilityNodeInfo.ACTION_CLICK);
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query);
@@ -422,11 +428,11 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String extractAfterVerb(String s) {
-        String[] verbs = {"قم بتشغيل","قم بفتح","اذهب الى","انتقل الى","روح الى","روح على","ادخل الى","اكتب النص","اكتب في","دوّن","اضف","append","اضغط على","انقر على","افتح","فتح","شغل","تشغيل","اكتب","اضغط","انقر","اختار","اختر","tap","open","launch","type"};
+        String[] verbs = {"قم بتشغيل","قم بفتح","افتح الرابط","اذهب الى الرابط","انتقل الى الرابط","اذهب الى","انتقل الى","روح الى","روح على","ادخل الى","اكتب النص","اكتب في","دوّن","اضف","append","اضغط على","انقر على","افتح","فتح","شغل","تشغيل","اكتب","اضغط","انقر","اختار","اختر","tap","open","launch","type"};
         String lower = normalizeCommand(s);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
-            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|تطبيق|في خانة الكتابة|في مربع النص|في خانة البحث|في مربع البحث|في البحث|لي)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
+            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|تطبيق|الرابط|في خانة الكتابة|في مربع النص|في خانة البحث|في مربع البحث|في البحث|لي)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
         }
         return s.trim();
     }
