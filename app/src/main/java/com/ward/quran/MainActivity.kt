@@ -5,6 +5,8 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebSettings
+import android.webkit.ValueCallback
+import android.net.Uri
 import android.graphics.Color
 import android.webkit.JavascriptInterface
 import android.app.AlarmManager
@@ -14,14 +16,26 @@ import android.content.Intent
 import java.util.Calendar
 class MainActivity : Activity() {
  private lateinit var webView: WebView
+ private var uploadCallback: ValueCallback<Array<Uri>>? = null
+ private val fileRequestCode = 7105
  override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState)
   window.statusBarColor=Color.rgb(16,57,47); window.navigationBarColor=Color.rgb(16,57,47)
   webView=WebView(this); webView.setBackgroundColor(Color.rgb(245,242,233))
   webView.settings.javaScriptEnabled=true; webView.settings.domStorageEnabled=true
   webView.settings.cacheMode=WebSettings.LOAD_DEFAULT; webView.settings.allowFileAccess=true
   webView.addJavascriptInterface(ReminderBridge(this),"WardNative")
-  webView.webViewClient=WebViewClient(); webView.webChromeClient=WebChromeClient(); setContentView(webView)
+  webView.webViewClient=WebViewClient(); webView.webChromeClient=object:WebChromeClient(){
+   override fun onShowFileChooser(view:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
+    uploadCallback?.onReceiveValue(null); uploadCallback=callback
+    return try { startActivityForResult(params.createIntent(),fileRequestCode); true }
+    catch(e:Exception) { uploadCallback?.onReceiveValue(null); uploadCallback=null; false }
+   }
+  }; setContentView(webView)
   if(savedInstanceState==null) webView.loadUrl("file:///android_asset/index.html") else webView.restoreState(savedInstanceState)
+ }
+ override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){
+  super.onActivityResult(requestCode,resultCode,data)
+  if(requestCode==fileRequestCode){val callback=uploadCallback?:return;uploadCallback=null;callback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data))}
  }
  override fun onSaveInstanceState(outState:Bundle){webView.saveState(outState);super.onSaveInstanceState(outState)}
  @Deprecated("Deprecated in Android") override fun onBackPressed(){if(this::webView.isInitialized&&webView.canGoBack())webView.goBack() else super.onBackPressed()}
