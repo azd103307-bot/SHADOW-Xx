@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.rgb(12,16,31));
 
         TextView title = new TextView(this);
-        title.setText("NOVA 2.1 🤖  مساعد الهاتف");
+        title.setText("NOVA 0.4 🤖  مساعد الهاتف");
         title.setTextColor(Color.WHITE);
         title.setTextSize(25);
         title.setGravity(Gravity.CENTER);
@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
         root.addView(title);
 
         TextView intro = new TextView(this);
-        intro.setText("اكتب مهمة بالعربية. يستطيع تقسيمها إلى خطوات، فتح التطبيقات، البحث، قراءة العناصر الظاهرة، الكتابة والضغط والتمرير. يحتاج إلى صلاحية إمكانية الوصول والنافذة العائمة.");
+        intro.setText("اكتب مهمة بالعربية. يستطيع تقسيمها إلى خطوات، فتح التطبيقات والبحث، قراءة نص الشاشة بالعربية والإنجليزية من الصورة أو عناصر الوصول، الكتابة والضغط والتمرير والتحكم بألواح النظام. يحتاج إلى صلاحية إمكانية الوصول والنافذة العائمة.");
         intro.setTextColor(Color.LTGRAY);
         intro.setTextSize(15);
         intro.setGravity(Gravity.CENTER);
@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
         root.addView(start);
 
         TextView note = new TextView(this);
-        note.setText("أمثلة: افتح يوتيوب ثم ابحث عن القطط ثم افتح أول نتيجة. أو: اقرأ الشاشة، انتظر 3 ثوانٍ، ارفع الصوت. الإرسال والحذف والدفع والنشر والاتصال تتطلب تأكيداً.");
+        note.setText("أمثلة: افتح يوتيوب ثم ابحث عن القطط ثم افتح أول نتيجة. أو: اقرأ الشاشة، افتح الإشعارات، انتظر 3 ثوانٍ، ارفع الصوت. القراءة البصرية تحتاج Android 11 أو أحدث. الإرسال والحذف والدفع والنشر والاتصال تتطلب تأكيداً.");
         note.setTextColor(Color.rgb(255,205,125));
         note.setTextSize(13);
         note.setPadding(0,dp(25),0,0);
