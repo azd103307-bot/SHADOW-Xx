@@ -49,7 +49,7 @@ public class PhoneControlService extends AccessibilityService {
     @Override public void onInterrupt() { }
     @Override public void onDestroy() {
         sequenceHandler.removeCallbacksAndMessages(null);
-        ocrExecutor.execute(() -> { if (tessBaseApi != null) { tessBaseApi.end(); tessBaseApi = null; } });
+        ocrExecutor.execute(() -> { if (tessBaseApi != null) { tessBaseApi.recycle(); tessBaseApi = null; } });
         ocrExecutor.shutdown();
         AssistantOverlayService.setOverlayTemporarilyHidden(false);
         if (instance == this) instance = null;
@@ -601,7 +601,7 @@ public class PhoneControlService extends AccessibilityService {
             if (tessBaseApi == null) {
                 tessBaseApi = new TessBaseAPI();
                 if (!tessBaseApi.init(getFilesDir().getAbsolutePath(), "ara+eng")) {
-                    tessBaseApi.end();
+                    tessBaseApi.recycle();
                     tessBaseApi = null;
                     return "تعذّر تشغيل محرك قراءة العربية.";
                 }
