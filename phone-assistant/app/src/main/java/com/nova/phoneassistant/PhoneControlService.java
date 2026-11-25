@@ -333,16 +333,11 @@ public class PhoneControlService extends AccessibilityService {
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query);
         boolean typed = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         if (!typed) return "التطبيق الحالي لم يسمح بالكتابة في خانة البحث.";
-        boolean submitted = false;
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            submitted = field.performAction(AccessibilityNodeInfo.ACTION_IME_ENTER);
-        }
-        if (!submitted) {
-            String clicked = clickText("بحث");
-            if (!clicked.startsWith("تم الضغط")) clicked = clickText("Search");
-            if (!clicked.startsWith("تم الضغط")) clicked = clickText("انتقال");
-            submitted = clicked.startsWith("تم الضغط");
-        }
+        String clicked = clickText("بحث");
+        if (!clicked.startsWith("تم الضغط")) clicked = clickText("Search");
+        if (!clicked.startsWith("تم الضغط")) clicked = clickText("Go");
+        if (!clicked.startsWith("تم الضغط")) clicked = clickText("انتقال");
+        boolean submitted = clicked.startsWith("تم الضغط");
         return submitted ? "تم البحث عن: " + query : "كتبت عبارة البحث، لكن لم أجد زر بحث لإرسالها. اضغط بحث على لوحة المفاتيح.";
     }
 
