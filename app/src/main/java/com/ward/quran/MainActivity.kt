@@ -32,6 +32,7 @@ class ReminderBridge(private val context: Context) {
   val intent=Intent(context,DailyReminderReceiver::class.java)
   val pending=PendingIntent.getBroadcast(context,7102,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
   if(!enabled){alarm.cancel(pending);return}
+  if(android.os.Build.VERSION.SDK_INT>=33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){(context as? Activity)?.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),7104)}
   val cal=Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,hour.coerceIn(0,23));set(Calendar.MINUTE,minute.coerceIn(0,59));set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0);if(timeInMillis<=System.currentTimeMillis())add(Calendar.DAY_OF_YEAR,1) }
   alarm.setInexactRepeating(AlarmManager.RTC_WAKEUP,cal.timeInMillis,AlarmManager.INTERVAL_DAY,pending)
  }
