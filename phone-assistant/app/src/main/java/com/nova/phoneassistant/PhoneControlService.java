@@ -8,6 +8,15 @@ import android.content.ClipData;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.graphics.Bitmap;
+import android.hardware.HardwareBuffer;
+import android.view.Display;
+import com.googlecode.tesseract.android.TessBaseAPI;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,6 +34,9 @@ public class PhoneControlService extends AccessibilityService {
     private volatile boolean repeatCancelled = false;
     private volatile boolean sequenceCancelled = false;
     private volatile long screenRevision = 0;
+    private final ExecutorService ocrExecutor = Executors.newSingleThreadExecutor();
+    private TessBaseAPI tessBaseApi;
+    private volatile boolean overlayTemporarilyHidden = false;
 
     public interface SequenceCallback {
         void onUpdate(String message);
@@ -37,6 +49,9 @@ public class PhoneControlService extends AccessibilityService {
     @Override public void onInterrupt() { }
     @Override public void onDestroy() {
         sequenceHandler.removeCallbacksAndMessages(null);
+        ocrExecutor.execute(() -> { if (tessBaseApi != null) { tessBaseApi.end(); tessBaseApi = null; } });
+        ocrExecutor.shutdown();
+        AssistantOverlayService.setOverlayTemporarilyHidden(false);
         if (instance == this) instance = null;
         super.onDestroy();
     }
@@ -90,6 +105,20 @@ public class PhoneControlService extends AccessibilityService {
         }
 
         String command = steps.get(index);
+        if (isScreenReadCommand(normalizeCommand(command))) {
+            callback.onUpdate("أقرأ الشاشة بصرياً الآن، وقد يستغرق ذلك بضع ثوانٍ...");
+            readScreenVisually(result -> {
+                if (sequenceCancelled) return;
+                if (log.length() > 0) log.append("\\n");
+                log.append("• ").append(command).append(": ").append(result);
+                callback.onUpdate(log.toString());
+                if (index + 1 < steps.size()) {
+                    sequenceHandler.postDelayed(
+                        () -> runStep(steps, index + 1, log, callback, 0), 500);
+                } else callback.onUpdate("اكتملت المهمة.\\n" + log.toString().trim());
+            });
+            return;
+        }
         long waitMillis = parseWaitMillis(command);
         if (waitMillis > 0) {
             String line = "• " + command + ": انتظار " + (waitMillis / 1000) + " ثانية.";
@@ -251,6 +280,24 @@ public class PhoneControlService extends AccessibilityService {
         }
         if (containsAny(lower, "اكتم الصوت", "كتم الصوت", "صامت", "mute")) {
             return adjustVolume(AudioManager.ADJUST_MUTE);
+        }
+        if (containsAny(lower, "افتح الاشعارات", "افتح الإشعارات", "شريط الاشعارات", "شريط الإشعارات", "الاشعارات", "الإشعارات", "notifications")) {
+            return performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS) ? "تم فتح لوحة الإشعارات." : "تعذّر فتح الإشعارات.";
+        }
+        if (containsAny(lower, "الاعدادات السريعة", "الإعدادات السريعة", "الاختصارات السريعة", "quick settings")) {
+            return performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS) ? "تم فتح الإعدادات السريعة." : "تعذّر فتح الإعدادات السريعة.";
+        }
+        if (containsAny(lower, "التطبيقات الاخيرة", "التطبيقات الأخيرة", "التطبيقات المفتوحة", "recent apps")) {
+            return performGlobalAction(GLOBAL_ACTION_RECENTS) ? "تم عرض التطبيقات الأخيرة." : "تعذّر عرض التطبيقات الأخيرة.";
+        }
+        if (containsAny(lower, "قائمة الطاقة", "قائمة التشغيل", "قائمة ايقاف التشغيل", "قائمة إيقاف التشغيل", "power menu")) {
+            return performGlobalAction(GLOBAL_ACTION_POWER_DIALOG) ? "تم فتح قائمة الطاقة." : "تعذّر فتح قائمة الطاقة.";
+        }
+        if (containsAny(lower, "تقسيم الشاشة", "الشاشة المنقسمة", "split screen")) {
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                return performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN) ? "تم طلب تقسيم الشاشة." : "تعذّر تقسيم الشاشة على هذا الجهاز.";
+            }
+            return "تقسيم الشاشة يتطلب Android 7 أو أحدث.";
         }
         if (containsAny(lower, "لقطة شاشة", "التقط الشاشة", "صور الشاشة", "screenshot")) {
             if (android.os.Build.VERSION.SDK_INT >= 28) {
@@ -476,6 +523,115 @@ public class PhoneControlService extends AccessibilityService {
             "ماذا يظهر على الشاشة", "ما الذي يظهر على الشاشة", "ماذا يوجد على الشاشة",
             "ما الموجود على الشاشة", "صف الشاشة", "اقرا الازرار", "اقرا النص الظاهر",
             "اقرا هذه الصفحة", "read screen", "describe screen", "what is on screen");
+    }
+
+    private interface OcrCallback { void onResult(String result); }
+
+    private void readScreenVisually(OcrCallback callback) {
+        if (android.os.Build.VERSION.SDK_INT < 30) {
+            AssistantOverlayService.setOverlayTemporarilyHidden(false);
+            callback.onResult("القراءة البصرية تتطلب Android 11 أو أحدث.\\n" + readCurrentScreen());
+            return;
+        }
+
+        overlayTemporarilyHidden = true;
+        AssistantOverlayService.setOverlayTemporarilyHidden(true);
+        sequenceHandler.postDelayed(() -> {
+            try {
+                takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+                    @Override public void onSuccess(ScreenshotResult screenshot) {
+                        Bitmap bitmap = null;
+                        HardwareBuffer buffer = null;
+                        try {
+                            buffer = screenshot.getHardwareBuffer();
+                            Bitmap hardwareBitmap = Bitmap.wrapHardwareBuffer(buffer, screenshot.getColorSpace());
+                            if (hardwareBitmap != null) {
+                                bitmap = hardwareBitmap.copy(Bitmap.Config.ARGB_8888, false);
+                            }
+                        } catch (Exception ignored) {
+                        } finally {
+                            if (buffer != null) buffer.close();
+                        }
+
+                        if (bitmap == null) {
+                            finishVisualRead(callback, "تعذّر تجهيز صورة الشاشة.\\n" + readCurrentScreen());
+                            return;
+                        }
+
+                        final Bitmap image = bitmap;
+                        ocrExecutor.execute(() -> {
+                            String recognized = runArabicOcr(image);
+                            sequenceHandler.post(() -> {
+                                String result = recognized.trim().isEmpty()
+                                    ? "لم أتمكن من تمييز نص واضح من الصورة.\\n" + readCurrentScreen()
+                                    : "النص المقروء من الشاشة (معالجة محلية على الهاتف):\\n" + recognized;
+                                finishVisualRead(callback, result);
+                            });
+                        });
+                    }
+
+                    @Override public void onFailure(int errorCode) {
+                        finishVisualRead(callback,
+                            "لم يسمح النظام بالتقاط الشاشة أو أن التطبيق يحمي محتواه (رمز " + errorCode + ").\\n" +
+                            readCurrentScreen());
+                    }
+                });
+            } catch (Exception e) {
+                finishVisualRead(callback,
+                    "تعذّر التقاط الشاشة على هذا الجهاز.\\n" + readCurrentScreen());
+            }
+        }, 450);
+    }
+
+    private void finishVisualRead(OcrCallback callback, String result) {
+        overlayTemporarilyHidden = false;
+        AssistantOverlayService.setOverlayTemporarilyHidden(false);
+        callback.onResult(result);
+    }
+
+    private String runArabicOcr(Bitmap bitmap) {
+        try {
+            File dataDir = new File(getFilesDir(), "tessdata");
+            if (!dataDir.exists() && !dataDir.mkdirs()) {
+                return "تعذّر إنشاء مجلد بيانات قراءة النص.";
+            }
+            copyOcrAssetIfNeeded("ara.traineddata", dataDir);
+            copyOcrAssetIfNeeded("eng.traineddata", dataDir);
+
+            if (tessBaseApi == null) {
+                tessBaseApi = new TessBaseAPI();
+                if (!tessBaseApi.init(getFilesDir().getAbsolutePath(), "ara+eng")) {
+                    tessBaseApi.end();
+                    tessBaseApi = null;
+                    return "تعذّر تشغيل محرك قراءة العربية.";
+                }
+            }
+            tessBaseApi.setImage(bitmap);
+            String text = tessBaseApi.getUTF8Text();
+            tessBaseApi.clear();
+            if (text == null) return "";
+            text = text.replaceAll("[ \\t]+", " ")
+                       .replaceAll("\\n{3,}", "\\n\\n")
+                       .trim();
+            if (text.length() > 4500) text = text.substring(0, 4500) + "\\n… تم اختصار النص.";
+            return text;
+        } catch (Exception e) {
+            return "تعذّر تشغيل القراءة البصرية: " + e.getClass().getSimpleName();
+        } finally {
+            if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+        }
+    }
+
+    private void copyOcrAssetIfNeeded(String fileName, File dataDir) throws Exception {
+        File destination = new File(dataDir, fileName);
+        if (destination.exists() && destination.length() > 1000) return;
+        try (InputStream in = getAssets().open("tessdata/" + fileName);
+             FileOutputStream out = new FileOutputStream(destination)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            out.flush();
+        }
     }
 
     private String readCurrentScreen() {
