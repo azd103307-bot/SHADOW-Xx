@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.ValueCallback
 import android.net.Uri
@@ -24,7 +25,15 @@ class MainActivity : Activity() {
   webView.settings.javaScriptEnabled=true; webView.settings.domStorageEnabled=true
   webView.settings.cacheMode=WebSettings.LOAD_DEFAULT; webView.settings.allowFileAccess=true
   webView.addJavascriptInterface(ReminderBridge(this),"WardNative")
-  webView.webViewClient=WebViewClient(); webView.webChromeClient=object:WebChromeClient(){
+  webView.webViewClient=object:WebViewClient(){
+   override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean {
+    return handleNavigation(request.url.toString())
+   }
+   @Suppress("DEPRECATION")
+   override fun shouldOverrideUrlLoading(view:WebView,url:String):Boolean {
+    return handleNavigation(url)
+   }
+  }; webView.webChromeClient=object:WebChromeClient(){
    override fun onShowFileChooser(view:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
     uploadCallback?.onReceiveValue(null); uploadCallback=callback
     return try { startActivityForResult(params.createIntent(),fileRequestCode); true }
@@ -32,6 +41,15 @@ class MainActivity : Activity() {
    }
   }; setContentView(webView)
   if(savedInstanceState==null) webView.loadUrl("file:///android_asset/index.html") else webView.restoreState(savedInstanceState)
+ }
+ private fun handleNavigation(raw:String):Boolean {
+  if(raw.startsWith("file:///android_asset/")) return false
+  val uri=Uri.parse(raw)
+  if(uri.scheme=="https" || uri.scheme=="http") {
+   return try { startActivity(Intent(Intent.ACTION_VIEW,uri)); true }
+   catch(e:Exception) { true }
+  }
+  return true
  }
  override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){
   super.onActivityResult(requestCode,resultCode,data)
