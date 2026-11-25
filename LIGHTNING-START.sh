@@ -24,8 +24,9 @@ uv sync --frozen
 if [ ! -f config.toml ]; then
   cp config.example.toml config.toml
   echo
-  echo "Created config.toml from config.example.toml."
-  echo "Add your own provider keys to config.toml before generating videos."
+  echo "Created: ${APP_DIR}/config.toml"
+  echo "Add your own provider keys, then run this script again."
+  exit 0
 fi
 
 echo
