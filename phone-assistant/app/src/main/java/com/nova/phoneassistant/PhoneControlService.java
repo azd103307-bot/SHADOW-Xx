@@ -232,6 +232,11 @@ public class PhoneControlService extends AccessibilityService {
         if (containsAny(lower, "ابحث عن", "ابحث في", "بحث عن", "search for")) {
             return searchFor(extractSearchQuery(normalized));
         }
+        if (containsAny(lower, "ارسل", "ارسال", "ابعث", "send")) {
+            String sent = clickText("إرسال");
+            if (!sent.startsWith("تم الضغط")) sent = clickText("Send");
+            return sent.startsWith("تم الضغط") ? "تم الضغط على زر الإرسال." : "لم أجد زر إرسال. لم يتم إرسال أي شيء.";
+        }
         if (containsAny(lower, "اول نتيجة", "أول نتيجة", "اول فيديو", "أول فيديو", "اول عنصر", "أول عنصر", "first result")) {
             return clickFirstResult();
         }
