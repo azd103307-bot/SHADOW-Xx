@@ -23,6 +23,18 @@ import android.app.AlertDialog;
 
 public class AssistantOverlayService extends Service {
     public static EditText activeCommandInput;
+    private static volatile AssistantOverlayService liveInstance;
+    private final android.os.Handler overlayHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+
+    public static void setOverlayTemporarilyHidden(boolean hidden) {
+        AssistantOverlayService service = liveInstance;
+        if (service == null) return;
+        service.overlayHandler.post(() -> {
+            int visibility = hidden ? View.INVISIBLE : View.VISIBLE;
+            if (service.panel != null) service.panel.setVisibility(visibility);
+            if (service.bubble != null) service.bubble.setVisibility(visibility);
+        });
+    }
     private WindowManager wm;
     private View bubble;
     private View panel;
@@ -31,6 +43,7 @@ public class AssistantOverlayService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
+        liveInstance = this;
         wm = (WindowManager)getSystemService(WINDOW_SERVICE);
         showBubble();
     }
@@ -200,7 +213,9 @@ public class AssistantOverlayService extends Service {
         if(panel!=null) wm.removeView(panel);
         if(bubble!=null) wm.removeView(bubble);
         activeCommandInput=null;
-        panel=null; bubble=null; super.onDestroy();
+        panel=null; bubble=null;
+        if (liveInstance == this) liveInstance = null;
+        super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent) { return null; }
 }
