@@ -19,6 +19,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Download on-device OCR language data
+        run: |
+          mkdir -p phone-assistant/app/src/main/assets/tessdata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/ara.traineddata -o phone-assistant/app/src/main/assets/tessdata/ara.traineddata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata -o phone-assistant/app/src/main/assets/tessdata/eng.traineddata
       - name: Build debug APK
         working-directory: phone-assistant
         run: gradle --no-daemon assembleDebug
