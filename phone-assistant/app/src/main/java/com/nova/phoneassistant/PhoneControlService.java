@@ -42,7 +42,7 @@ public class PhoneControlService extends AccessibilityService {
             return;
         }
         if (startBoundedRepeat(raw, callback)) return;
-        String[] parts = raw.trim().split("\\s*(?:ثم|ثم بعدها|وبعدها|بعدها|بعد ذلك|then|;|\\n)\\s*", -1);
+        String[] parts = raw.trim().split("\\s*(?:ثم\\s+بعدها|ثم|وبعدها|بعدها|بعد ذلك|then|;|\\n)\\s*", -1);
         List<String> steps = new ArrayList<>();
         for (String part : parts) if (!part.trim().isEmpty()) steps.add(part.trim());
         if (steps.isEmpty()) {
@@ -152,7 +152,8 @@ public class PhoneControlService extends AccessibilityService {
         String normalized = raw.trim();
         String lower = normalizeCommand(normalized);
 
-        if (containsAny(lower, "افتح", "شغل", "اذهب الى", "اذهب إلى", "انتقل الى", "انتقل إلى", "روح الى", "روح على", "قم بفتح", "open ", "launch ")) {
+        if (isScreenReadCommand(lower)) return readCurrentScreen();
+        if (containsAny(lower, "افتح", "فتح ", "شغل", "تشغيل ", "اذهب الى", "انتقل الى", "روح الى", "روح على", "قم بفتح", "قم بتشغيل", "open ", "launch ")) {
             String app = extractAfterVerb(normalized);
             return launchApp(app);
         }
@@ -201,11 +202,11 @@ public class PhoneControlService extends AccessibilityService {
     }
 
     private String extractAfterVerb(String s) {
-        String[] verbs = {"اذهب الى","انتقل الى","اذهب إلى","انتقل إلى","اكتب النص","اكتب في","دوّن","أضف","اضف","append","اضغط على","انقر على","افتح","شغل","اكتب","اضغط","انقر","اختار","اختر","tap","open","type"};
+        String[] verbs = {"قم بتشغيل","قم بفتح","اذهب الى","انتقل الى","روح الى","روح على","ادخل الى","اكتب النص","اكتب في","دوّن","اضف","append","اضغط على","انقر على","افتح","فتح","شغل","تشغيل","اكتب","اضغط","انقر","اختار","اختر","tap","open","launch","type"};
         String lower = normalizeCommand(s);
         for (String verb : verbs) {
             int i = lower.indexOf(verb.toLowerCase(Locale.ROOT));
-            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|إلى|تطبيق|في خانة الكتابة|في مربع النص)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
+            if (i >= 0) return s.substring(i + verb.length()).trim().replaceFirst("^(على|الى|تطبيق|في خانة الكتابة|في مربع النص|في خانة البحث|في مربع البحث|في البحث|لي)\\s*", "").replaceFirst("^[：:،,؛;\\-]+\\s*", "").trim();
         }
         return s.trim();
     }
@@ -230,12 +231,97 @@ public class PhoneControlService extends AccessibilityService {
         else if (n.contains("سناب") || n.contains("snapchat")) pkg = "com.snapchat.android";
         else if (n.contains("تيك توك") || n.contains("tiktok")) pkg = "com.zhiliaoapp.musically";
 
+        else if (n.equals("x") || n.contains("تويتر") || n.contains("twitter")) pkg = "com.twitter.android";
+        else if (n.contains("ديسكورد") || n.contains("discord")) pkg = "com.discord";
+        else if (n.contains("سبوتيفاي") || n.contains("spotify")) pkg = "com.spotify.music";
+        else if (n.contains("جوجل") || n.equals("google")) pkg = "com.google.android.googlequicksearchbox";
+        else if (n.contains("متصفح سامسونج") || n.contains("samsung internet")) pkg = "com.sec.android.app.sbrowser";
+
         PackageManager pm = getPackageManager();
-        Intent intent = pkg == null ? pm.getLaunchIntentForPackage(name) : pm.getLaunchIntentForPackage(pkg);
-        if (intent == null) return "لم أجد التطبيق: " + name + ". تأكد من تثبيته.";
+        Intent intent = pkg == null ? null : pm.getLaunchIntentForPackage(pkg);
+        if (intent == null) {
+            String discovered = findInstalledAppPackage(n);
+            if (discovered != null) intent = pm.getLaunchIntentForPackage(discovered);
+        }
+        if (intent == null) return "لم أجد تطبيقاً مطابقاً للاسم: " + name + ". تأكد من تثبيته أو اكتب اسمه كما يظهر في الهاتف.";
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         return "جارٍ فتح " + name;
+    }
+
+
+    private boolean isScreenReadCommand(String lower) {
+        return containsAny(lower, "اقرا الشاشة", "اقرا ما على الشاشة", "اقرا محتوى الشاشة",
+            "ماذا يظهر على الشاشة", "ما الذي يظهر على الشاشة", "ماذا يوجد على الشاشة",
+            "ما الموجود على الشاشة", "صف الشاشة", "اقرا الازرار", "اقرا النص الظاهر",
+            "اقرا هذه الصفحة", "read screen", "describe screen", "what is on screen");
+    }
+
+    private String readCurrentScreen() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return "لا أستطيع قراءة الشاشة الآن. افتح التطبيق المطلوب ثم أعد الأمر.";
+        String packageName = root.getPackageName() == null ? "" : root.getPackageName().toString();
+        String appLabel = packageName;
+        try {
+            android.content.pm.ApplicationInfo info = getPackageManager().getApplicationInfo(packageName, 0);
+            appLabel = getPackageManager().getApplicationLabel(info).toString();
+        } catch (Exception ignored) { }
+        StringBuilder out = new StringBuilder("الشاشة الحالية: ").append(appLabel).append("\n");
+        int[] count = {0};
+        java.util.HashSet<String> seen = new java.util.HashSet<>();
+        appendVisibleNodes(root, out, seen, count, 0);
+        if (count[0] == 0) out.append("لم يعرض التطبيق نصوصاً قابلة للقراءة. قد تكون الشاشة رسومية أو محمية.");
+        if (out.length() > 2600) out.setLength(2600);
+        if (out.length() >= 2598) out.append("\n… تم اختصار بقية المحتوى.");
+        return out.toString();
+    }
+
+    private void appendVisibleNodes(AccessibilityNodeInfo node, StringBuilder out,
+            java.util.Set<String> seen, int[] count, int depth) {
+        if (node == null || depth > 12 || count[0] >= 38 || out.length() >= 2450) return;
+        String text = "";
+        if (node.isPassword()) {
+            if (node.isEditable()) text = "[حقل كلمة مرور مخفي]";
+        } else {
+            CharSequence label = node.getText();
+            CharSequence description = node.getContentDescription();
+            if (label != null) text = label.toString().trim();
+            if (text.isEmpty() && description != null) text = description.toString().trim();
+        }
+        if (!text.isEmpty()) {
+            String key = normalizeCommand(text);
+            if (!key.isEmpty() && seen.add(key)) {
+                String kind = node.isEditable() ? "حقل إدخال" : (node.isClickable() ? "عنصر قابل للضغط" : "نص");
+                out.append("• ").append(kind).append(": ").append(text).append("\n");
+                count[0]++;
+            }
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            if (count[0] >= 38 || out.length() >= 2450) break;
+            appendVisibleNodes(node.getChild(i), out, seen, count, depth + 1);
+        }
+    }
+
+    private String findInstalledAppPackage(String wanted) {
+        if (wanted == null || wanted.trim().isEmpty()) return null;
+        try {
+            Intent launcher = new Intent(Intent.ACTION_MAIN, null);
+            launcher.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<android.content.pm.ResolveInfo> apps = getPackageManager().queryIntentActivities(launcher, 0);
+            String bestPackage = null;
+            int bestScore = 0;
+            for (android.content.pm.ResolveInfo app : apps) {
+                if (app.activityInfo == null) continue;
+                String candidate = normalizeCommand(app.loadLabel(getPackageManager()).toString());
+                if (candidate.isEmpty()) continue;
+                int score = 0;
+                if (candidate.equals(wanted)) score = 100;
+                else if (candidate.startsWith(wanted) || wanted.startsWith(candidate)) score = 70;
+                else if (candidate.contains(wanted) || wanted.contains(candidate)) score = 50;
+                if (score > bestScore) { bestScore = score; bestPackage = app.activityInfo.packageName; }
+            }
+            return bestScore >= 50 ? bestPackage : null;
+        } catch (Exception ignored) { return null; }
     }
 
     private String typeText(String text) {
@@ -296,6 +382,7 @@ public class PhoneControlService extends AccessibilityService {
         CharSequence t = node.getText();
         CharSequence d = node.getContentDescription();
         String q = normalizeCommand(target.trim());
+        if (q.isEmpty()) return null;
         if ((t != null && normalizeCommand(t.toString()).contains(q)) ||
             (d != null && normalizeCommand(d.toString()).contains(q))) return node;
         for (int i=0;i<node.getChildCount();i++) {
