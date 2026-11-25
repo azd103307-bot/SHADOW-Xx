@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ScrollView;
 import android.app.AlertDialog;
 
 public class AssistantOverlayService extends Service {
@@ -93,7 +94,7 @@ public class AssistantOverlayService extends Service {
 
         EditText command = new EditText(this);
         activeCommandInput = command;
-        command.setHint("اكتب أمرك هنا... مثال: افتح واتساب ثم اكتب مرحباً");
+        command.setHint("جرّب: افتح واتساب ثم اكتب مرحباً، أو اقرأ الشاشة");
         command.setTextColor(Color.WHITE); command.setHintTextColor(Color.LTGRAY);
         command.setTextSize(16); command.setMinLines(3); command.setMaxLines(5); command.setGravity(Gravity.TOP|Gravity.RIGHT); command.setSingleLine(false);
         command.setBackground(shape(Color.rgb(35,44,69),14));
@@ -108,9 +109,15 @@ public class AssistantOverlayService extends Service {
         cp.topMargin=dp(10); box.addView(command,cp);
 
         TextView status = new TextView(this);
-        status.setText("تحكم كتابي فقط: افتح تطبيقاً، اكتب نصاً، اضغط عنصراً، مرّر أو ارجع.");
+        status.setText("تحكم كتابي فقط: افتح تطبيقاً، اقرأ الشاشة، اكتب نصاً، اضغط عنصراً، مرّر أو ارجع.");
         status.setTextColor(Color.rgb(185,198,225)); status.setTextSize(12);
-        status.setPadding(dp(2),dp(9),dp(2),dp(8)); box.addView(status);
+        status.setTextIsSelectable(true);
+        status.setPadding(dp(2),dp(9),dp(2),dp(8));
+        ScrollView logScroll = new ScrollView(this);
+        logScroll.setFillViewport(false);
+        logScroll.addView(status, new ScrollView.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(-1, dp(142));
+        box.addView(logScroll, logParams);
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
