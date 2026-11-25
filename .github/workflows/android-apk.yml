@@ -1,4 +1,5 @@
 name: Build Android APK
+# Rebuild APK on every update to the default branch.
 on:
   push:
     branches: [ main, master ]
