@@ -149,6 +149,7 @@ class ConstructionActivity : Activity() {
             measureCaptureUri=uri
             val intent=Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply{
                 putExtra(MediaStore.EXTRA_OUTPUT,uri)
+                clipData=android.content.ClipData.newUri(contentResolver,"measurement",uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
             if(intent.resolveActivity(packageManager)!=null)startActivityForResult(intent,4104)
@@ -219,24 +220,26 @@ class ConstructionActivity : Activity() {
     @Deprecated("Deprecated in Android API; retained for broad device compatibility")
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){
         super.onActivityResult(requestCode,resultCode,data)
-        if(resultCode!=RESULT_OK||data?.data==null)return
+        if(resultCode!=RESULT_OK)return
         try{
+            if(requestCode==4104){
+                val cameraUri=measureCaptureUri?:throw IllegalStateException("لم يتم حفظ الصورة")
+                showPhotoMeasure(decodeMeasurePhoto(cameraUri))
+                measureCaptureUri=null
+                return
+            }
+            val uri=data?.data?:return
             if(requestCode==4101){
                 val json=scene.renderer.exportProject()
-                contentResolver.openOutputStream(data.data!!)?.use{it.write(json.toByteArray(Charsets.UTF_8))}
+                contentResolver.openOutputStream(uri)?.use{it.write(json.toByteArray(Charsets.UTF_8))}
                 Toast.makeText(this,"تم تصدير ملف المشروع",Toast.LENGTH_LONG).show()
             }else if(requestCode==4102){
-                val json=contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText()}
+                val json=contentResolver.openInputStream(uri)?.bufferedReader()?.use{it.readText()}
                     ?:throw IllegalStateException("تعذر قراءة الملف")
                 scene.renderer.importProject(json)
                 Toast.makeText(this,"تم استيراد ملف المشروع",Toast.LENGTH_LONG).show()
             }else if(requestCode==4103){
-                val photo=decodeMeasurePhoto(data.data!!)
-                showPhotoMeasure(photo)
-            }else if(requestCode==4104){
-                val uri=measureCaptureUri?:throw IllegalStateException("لم يتم حفظ الصورة")
                 showPhotoMeasure(decodeMeasurePhoto(uri))
-                measureCaptureUri=null
             }
         }catch(e:Exception){Toast.makeText(this,"تعذر تنفيذ العملية: ${e.message}",Toast.LENGTH_LONG).show()}
     }
