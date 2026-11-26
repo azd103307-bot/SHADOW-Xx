@@ -735,6 +735,10 @@ private class BuildRenderer:GLSurfaceView.Renderer{
                     }
                 }
             }
+            if(openingWidth>0f&&openingHeight>0f&&openingTop+.20f<=height){
+                val lintelWidth=minOf(openingWidth+.40f,length)
+                parts.add(Part("كمرة",0f,openingTop+.10f,0f,lintelWidth,.20f,thickness,nailing,activeColor))
+            }
             selectedIndex=parts.lastIndex
             return parts.size-before
         }
