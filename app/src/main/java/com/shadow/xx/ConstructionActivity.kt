@@ -175,15 +175,33 @@ class ConstructionActivity : Activity() {
             .setNegativeButton("إلغاء",null).setPositiveButton("مسح"){_,_->scene.renderer.clear();info.text="تم مسح مساحة العمل"}.show()
     }
     private fun showProjectNotes(){
-        val notes=scene.renderer.getNotes()
-        if(notes.isBlank()){Toast.makeText(this,"لم تكتب شرحاً للمشروع بعد",Toast.LENGTH_SHORT).show();return}
-        val view=TextView(this).apply{text=notes;textSize=16f;setPadding(24,16,24,16);textDirection=android.view.View.TEXT_DIRECTION_LOCALE}
-        AlertDialog.Builder(this).setTitle("شرح المشروع وخطواته").setView(ScrollView(this).apply{addView(view)})
-            .setPositiveButton("إغلاق",null).show()
+        val steps=scene.renderer.getNotes().lineSequence().map{it.trim()}.filter{it.isNotEmpty()}.toList()
+        if(steps.isEmpty()){Toast.makeText(this,"لم تكتب شرحاً للمشروع بعد",Toast.LENGTH_SHORT).show();return}
+        var index=0
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(22,12,22,8)}
+        val counter=TextView(this).apply{textSize=13f;gravity=Gravity.CENTER;setTextColor(0xFF64748B.toInt())}
+        val step=TextView(this).apply{textSize=19f;setTextColor(0xFF172033.toInt());setPadding(8,24,8,24);minHeight=dp(150);gravity=Gravity.CENTER_VERTICAL;textDirection=android.view.View.TEXT_DIRECTION_LOCALE}
+        val nav=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        val previous=Button(this).apply{text="السابق";isAllCaps=false}
+        val next=Button(this).apply{text="التالي";isAllCaps=false}
+        fun render(){
+            counter.text="الخطوة ${index+1} من ${steps.size}"
+            step.text=steps[index]
+            previous.isEnabled=index>0
+            next.isEnabled=index<steps.lastIndex
+        }
+        previous.setOnClickListener{index=(index-1).coerceAtLeast(0);render()}
+        next.setOnClickListener{index=(index+1).coerceAtMost(steps.lastIndex);render()}
+        nav.addView(previous,LinearLayout.LayoutParams(0,dp(48),1f))
+        nav.addView(next,LinearLayout.LayoutParams(0,dp(48),1f))
+        panel.addView(counter);panel.addView(step);panel.addView(nav)
+        render()
+        AlertDialog.Builder(this).setTitle("عرض شرح البناء خطوة بخطوة").setView(panel)
+            .setNegativeButton("إنهاء",null).show()
     }
     private fun editProjectNotes(){
         val editor=EditText(this).apply{
-            hint="اكتب شرح البناء وخطوات التنفيذ بالترتيب..."
+            hint="اكتب كل خطوة في سطر مستقل، وسيتم عرضها للآخرين خطوة بخطوة..."
             setText(scene.renderer.getNotes())
             minLines=5;gravity=Gravity.TOP;inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
