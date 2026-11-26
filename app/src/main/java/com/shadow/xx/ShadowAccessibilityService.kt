@@ -116,6 +116,7 @@ class ShadowAccessibilityService : AccessibilityService() {
             when (e.action) {
                 MotionEvent.ACTION_DOWN -> { sx = e.rawX; sy = e.rawY; ox = p.x; oy = p.y; return true }
                 MotionEvent.ACTION_MOVE -> { p.x = ox + (e.rawX - sx).toInt(); p.y = oy + (e.rawY - sy).toInt(); try { wm?.updateViewLayout(panel, p) } catch (_: Exception) {}; return true }
+                MotionEvent.ACTION_UP -> { v.performClick(); return true }
             }
             return true
         }
