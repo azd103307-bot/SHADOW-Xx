@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent></queries>
-    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="SHADOW Xx" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:supportsRtl="true">
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="@string/app_name" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name=".ConstructionActivity" android:screenOrientation="sensor" android:exported="false" />
         <activity android:name=".TextResultActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
