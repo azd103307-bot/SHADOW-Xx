@@ -94,6 +94,7 @@ class ConstructionActivity : Activity() {
         btn(fifth,"فتح المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).getString("project",null)?.let{if(scene.renderer.importProject(it))info.text="تم فتح المشروع" else info.text="ملف المشروع غير صالح"}?:run{info.text="لا يوجد مشروع محفوظ"}}
         btn(fifth,"التمتير"){measurementDialog()}
         btn(fifth,"تقرير ونسخ"){val t=scene.renderer.report();(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("تقرير البناء",t));info.text="تم نسخ تقرير الكميات"}
+        btn(fifth,"تكلفة المشروع"){projectCostDialog()}
         controls.addView(fifth)
         val sixth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(sixth,"حفظ باسم"){saveNamedProject()}
@@ -308,6 +309,22 @@ class ConstructionActivity : Activity() {
         val report=scene.renderer.report()
         val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"تقرير مشروع البناء");putExtra(Intent.EXTRA_TEXT,report)}
         startActivity(Intent.createChooser(send,"مشاركة تقرير البناء"))
+    }
+    private fun projectCostDialog(){
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(20,8,20,0)}
+        fun priceField(label:String)=EditText(this).apply{hint=label;inputType=8194}
+        val block=priceField("سعر البلوكة")
+        val brick=priceField("سعر الطوبة")
+        val timber=priceField("سعر متر الخشب")
+        val concrete=priceField("سعر متر الخرسانة المكعب")
+        listOf(block,brick,timber,concrete).forEach{panel.addView(it)}
+        AlertDialog.Builder(this).setTitle("تقدير تكلفة مواد النموذج").setView(panel)
+            .setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
+                val prices=doubleArrayOf(block.text.toString().toDoubleOrNull()?:0.0,brick.text.toString().toDoubleOrNull()?:0.0,timber.text.toString().toDoubleOrNull()?:0.0,concrete.text.toString().toDoubleOrNull()?:0.0)
+                val result=scene.renderer.projectCost(prices)
+                AlertDialog.Builder(this).setTitle("تقدير التكلفة").setMessage(result).setPositiveButton("إغلاق",null)
+                    .setNeutralButton("نسخ"){_,_->(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("تكلفة المشروع",result))}.show()
+            }.show()
     }
     private fun editSelectedDimensions(){
         val current=scene.renderer.selectedDimensions()?:run{info.text="حدد قطعة أولاً";return}
@@ -597,6 +614,15 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             projectNotes=root.optString("notes","")
             true
         }catch(_:Exception){false}
+    }
+    fun projectCost(prices:DoubleArray):String=synchronized(parts){
+        val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
+        val timber=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else it.sx.toDouble()}
+        val concrete=parts.filter{it.kind=="عمود"||it.kind=="كمرة"||it.kind=="بلاطة"}.sumOf{(it.sx*it.sy*it.sz).toDouble()}
+        val p=DoubleArray(4){prices.getOrElse(it){0.0}.coerceAtLeast(0.0)}
+        val blockCost=blocks*p[0];val brickCost=bricks*p[1];val timberCost=timber*p[2];val concreteCost=concrete*p[3]
+        val total=blockCost+brickCost+timberCost+concreteCost
+        "البلوك: $blocks × %.2f = %.2f\\nالطوب: $bricks × %.2f = %.2f\\nالخشب: %.2f م × %.2f = %.2f\\nالخرسانة: %.3f م³ × %.2f = %.2f\\n\\nإجمالي التكلفة التقديري: %.2f".format(p[0],blockCost,p[1],brickCost,timber,p[2],timberCost,concrete,p[3],concreteCost,total)
     }
     fun report():String{synchronized(parts){
         val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
