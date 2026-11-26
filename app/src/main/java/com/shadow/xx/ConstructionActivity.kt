@@ -126,6 +126,7 @@ class ConstructionActivity : Activity() {
         controls.addView(eighth)
         val ninth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(ninth,"تصدير مخطط DXF"){exportDxfFile()}
+        btn(ninth,"تصدير نموذج OBJ ثلاثي الأبعاد"){exportObjFile()}
         controls.addView(ninth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
@@ -313,6 +314,13 @@ class ConstructionActivity : Activity() {
         AlertDialog.Builder(this).setTitle("القياس اليدوي من صورة").setView(ScrollView(this).apply{addView(panel)})
             .setPositiveButton("إغلاق",null).show()
     }
+    private fun exportObjFile(){
+        val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
+            addCategory(Intent.CATEGORY_OPENABLE);type="application/octet-stream"
+            putExtra(Intent.EXTRA_TITLE,"SHADOW_BUILD_model.obj")
+        }
+        startActivityForResult(intent,4106)
+    }
     private fun exportDxfFile(){
         val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
             addCategory(Intent.CATEGORY_OPENABLE);type="application/dxf"
@@ -348,7 +356,12 @@ class ConstructionActivity : Activity() {
                 return
             }
             val uri=data?.data?:return
-            if(requestCode==4105){
+            if(requestCode==4106){
+                val obj=scene.renderer.exportObj()
+                val output=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر إنشاء ملف OBJ")
+                output.use{it.write(obj.toByteArray(Charsets.UTF_8))}
+                Toast.makeText(this,"تم تصدير النموذج ثلاثي الأبعاد OBJ",Toast.LENGTH_LONG).show()
+            }else if(requestCode==4105){
                 val dxf=scene.renderer.exportDxf()
                 val output=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر إنشاء ملف DXF")
                 output.use{it.write(dxf.toByteArray(Charsets.UTF_8))}
@@ -859,6 +872,27 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             pair(40,"0.12");pair(1,"${label}_${index+1}");pair(50,"0")
         }
         pair(0,"ENDSEC");pair(0,"EOF")
+        out.toString()
+    }
+    fun exportObj():String=synchronized(parts){
+        val out=StringBuilder()
+        out.append("# SHADOW BUILD 3D model - units: meters\\n")
+        var base=1
+        parts.forEachIndexed{index,p->
+            val label=when(p.kind){"بلوك"->"BLOCK";"طوب"->"BRICK";"لوح"->"WOOD_BOARD";"مربع"->"WOOD_SQUARE";"دعامة"->"SUPPORT";"قالب"->"FORMWORK";"عمود"->"COLUMN";"كمرة"->"BEAM";"بلاطة"->"SLAB";else->"PART"}
+            out.append("o ${label}_${index+1}\\n")
+            val hx=p.sx/2f;val hy=p.sy/2f;val hz=p.sz/2f
+            val vertices=arrayOf(
+                floatArrayOf(p.x-hx,p.y-hy,p.z-hz),floatArrayOf(p.x+hx,p.y-hy,p.z-hz),
+                floatArrayOf(p.x+hx,p.y+hy,p.z-hz),floatArrayOf(p.x-hx,p.y+hy,p.z-hz),
+                floatArrayOf(p.x-hx,p.y-hy,p.z+hz),floatArrayOf(p.x+hx,p.y-hy,p.z+hz),
+                floatArrayOf(p.x+hx,p.y+hy,p.z+hz),floatArrayOf(p.x-hx,p.y+hy,p.z+hz)
+            )
+            vertices.forEach{v->out.append("v ${v[0]} ${v[1]} ${v[2]}\\n")}
+            val faces=arrayOf("5 6 7 8","2 1 4 3","1 5 8 4","6 2 3 7","4 8 7 3","1 2 6 5")
+            faces.forEach{face->out.append("f ").append(face.split(" ").joinToString(" "){(it.toInt()+base-1).toString()}).append("\\n")}
+            base+=8
+        }
         out.toString()
     }
     fun report():String{synchronized(parts){
