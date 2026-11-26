@@ -119,16 +119,21 @@ class ConstructionActivity : Activity() {
         val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(12,8,12,4)}
         val reference=EditText(this).apply{hint="طول مرجعي معروف بالمتر، مثل 1.00";inputType=8194}
         val message=TextView(this).apply{text="أدخل طولاً تعرفه في الصورة، ثم المس نقطتي بدايته ونهايته لمعايرة القياس.";textSize=13f}
-        val image=ImageView(this).apply{setImageBitmap(bitmap);scaleType=ImageView.ScaleType.FIT_XY;contentDescription="صورة القياس"}
+        val image=ImageView(this).apply{setImageBitmap(bitmap);scaleType=ImageView.ScaleType.FIT_CENTER;adjustViewBounds=true;contentDescription="صورة القياس"}
         panel.addView(reference);panel.addView(message);panel.addView(image,LinearLayout.LayoutParams(-1,dp(300)))
         var first:PointF?=null
         var metersPerPixel:Double?=null
         image.setOnTouchListener{_,event->
             if(event.action==MotionEvent.ACTION_DOWN){
+                val mapped=floatArrayOf(event.x,event.y)
+                val inverse=android.graphics.Matrix()
+                if(!image.imageMatrix.invert(inverse))return@setOnTouchListener true
+                inverse.mapPoints(mapped)
+                if(mapped[0]<0||mapped[1]<0||mapped[0]>bitmap.width||mapped[1]>bitmap.height)return@setOnTouchListener true
                 val a=first
-                if(a==null){first=PointF(event.x,event.y);message.text="تم تحديد النقطة الأولى؛ المس النقطة الثانية."}
+                if(a==null){first=PointF(mapped[0],mapped[1]);message.text="تم تحديد النقطة الأولى؛ المس النقطة الثانية."}
                 else{
-                    val pixels=hypot((event.x-a.x).toDouble(),(event.y-a.y).toDouble()).coerceAtLeast(1.0)
+                    val pixels=hypot((mapped[0]-a.x).toDouble(),(mapped[1]-a.y).toDouble()).coerceAtLeast(1.0)
                     if(metersPerPixel==null){
                         val known=reference.text.toString().toDoubleOrNull()
                         if(known==null||known<=0){message.text="أدخل طولاً مرجعياً صحيحاً أولاً."}
