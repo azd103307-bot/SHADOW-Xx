@@ -58,6 +58,7 @@ class ConstructionActivity : Activity() {
         btn(buildRow,"جدار"){scene.renderer.addWall();info.text="تمت إضافة جدار من عدة طبقات"}
         btn(buildRow,"قالب صب"){selected="قالب";info.text="المس المشهد لإضافة قالب الصب"}
         btn(buildRow,"قطعة فوقها"){scene.renderer.addOnTop(selected);info.text="أضيفت قطعة فوق القطعة المحددة"}
+        btn(buildRow,"مكتبة القطع"){openPartLibrary()}
         controls.addView(buildRow)
         val cameraRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(cameraRow,"منظور"){scene.renderer.setView("perspective")}
@@ -135,6 +136,13 @@ class ConstructionActivity : Activity() {
                     info.text="تم حذف المشروع: $name"
                 }.show()
         }.setNegativeButton("إغلاق",null).show()
+    }
+    private fun openPartLibrary(){
+        val items=arrayOf("بلوك","طوب","لوح خشب","مربع خشب","دعامة","قالب","عمود خرسانة","كمرة خرسانة","بلاطة خرسانة")
+        AlertDialog.Builder(this).setTitle("مكتبة مواد البناء").setItems(items){_,which->
+            selected=when(which){2->"لوح";3->"مربع";4->"دعامة";5->"قالب";6->"عمود";7->"كمرة";8->"بلاطة";else->items[which]}
+            info.text="القطعة المختارة: ${items[which]} — المس المشهد لوضعها"
+        }.show()
     }
     private fun editProjectNotes(){
         val editor=EditText(this).apply{
@@ -442,7 +450,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         drawCube(0f,-.12f,0f,7f,.12f,7f,floatArrayOf(.22f,.27f,.32f))
         val copy=synchronized(parts){parts.toList()}
         copy.forEachIndexed{index,p->
-            val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"لوح"->floatArrayOf(.57f,.32f,.14f);else->floatArrayOf(.75f,.52f,.25f)}}
+            val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"طوب"->floatArrayOf(.62f,.30f,.20f);"لوح","مربع","دعامة","قالب"->floatArrayOf(.57f,.32f,.14f);"عمود","كمرة","بلاطة"->floatArrayOf(.62f,.64f,.67f);else->floatArrayOf(.75f,.52f,.25f)}}
             if(index==selectedIndex){color[0]=(color[0]+.25f).coerceAtMost(1f);color[1]=(color[1]+.25f).coerceAtMost(1f)}
             drawCube(p.x,p.y,p.z,p.sx,p.sy,p.sz,color)
             if(p.nailed)drawCube(p.x,p.y+p.sy/2+.018f,p.z,.045f,.035f,.045f,floatArrayOf(.78f,.82f,.88f))
@@ -488,6 +496,18 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         buffer.position(3);GLES20.glEnableVertexAttribArray(colorHandle);GLES20.glVertexAttribPointer(colorHandle,3,GLES20.GL_FLOAT,false,24,buffer)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,36)
     }
+    private fun dimensionsFor(kind:String):Triple<Float,Float,Float> = when(kind){
+        "بلوك"->Triple(.68f,.32f,.32f)
+        "طوب"->Triple(.20f,.06f,.10f)
+        "لوح"->Triple(woodLength,.035f,.10f)
+        "مربع"->Triple(woodLength,.07f,.07f)
+        "دعامة"->Triple(.07f,woodLength,.07f)
+        "قالب"->Triple(woodLength,.08f,.18f)
+        "عمود"->Triple(.30f,2.5f,.30f)
+        "كمرة"->Triple(2f,.25f,.25f)
+        "بلاطة"->Triple(2f,.15f,2f)
+        else->Triple(woodLength,.07f,.07f)
+    }
     fun setView(view:String){when(view){"top"->{angleX=82f;angleY=0f;cameraDistance=10f};"front"->{angleX=0f;angleY=0f;cameraDistance=9f};"side"->{angleX=0f;angleY=90f;cameraDistance=9f};else->{angleX=22f;angleY=35f;cameraDistance=9f}}}
     fun rotate(dx:Float,dy:Float){angleY+=dx;angleX=(angleX+dy).coerceIn(-55f,85f)}
     fun zoom(delta:Float){cameraDistance=(cameraDistance+delta).coerceIn(4.5f,18f)}
@@ -495,11 +515,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val n=parts.size
         val x=((n%8)-3.5f)*.68f
         val z=((n/8)%8-3.5f)*.68f
-        val dims=when(kind){
-            "بلوك"->Triple(.68f,.32f,.32f)
-            "لوح"->Triple(woodLength,.035f,.10f)
-            else->Triple(woodLength,.07f,.07f)
-        }
+        val dims=dimensionsFor(kind)
         parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing))
     }}
     fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
@@ -509,7 +525,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val placeZ=if(snapEnabled)round(z*10f)/10f else z
         synchronized(parts){
             remember()
-            val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
+            val dims=dimensionsFor(kind)
             parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor));selectedIndex=parts.lastIndex
         }
     }
