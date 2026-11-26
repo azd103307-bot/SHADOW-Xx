@@ -163,8 +163,8 @@ class ConstructionActivity : Activity() {
                 clipData=android.content.ClipData.newUri(contentResolver,"measurement",uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
-            if(intent.resolveActivity(packageManager)!=null)startActivityForResult(intent,4104)
-            else{contentResolver.delete(uri,null,null);measureCaptureUri=null;Toast.makeText(this,"لا يوجد تطبيق كاميرا متاح",Toast.LENGTH_LONG).show()}
+            try{startActivityForResult(intent,4104)}
+            catch(e:Exception){contentResolver.delete(uri,null,null);measureCaptureUri=null;throw e}
         }catch(e:Exception){Toast.makeText(this,"تعذر تشغيل الكاميرا: ${e.message}",Toast.LENGTH_LONG).show()}
     }
     private fun chooseMeasurePhoto(){
@@ -231,7 +231,10 @@ class ConstructionActivity : Activity() {
     @Deprecated("Deprecated in Android API; retained for broad device compatibility")
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){
         super.onActivityResult(requestCode,resultCode,data)
-        if(resultCode!=RESULT_OK)return
+        if(resultCode!=RESULT_OK){
+            if(requestCode==4104){measureCaptureUri?.let{contentResolver.delete(it,null,null)};measureCaptureUri=null}
+            return
+        }
         try{
             if(requestCode==4104){
                 val cameraUri=measureCaptureUri?:throw IllegalStateException("لم يتم حفظ الصورة")
