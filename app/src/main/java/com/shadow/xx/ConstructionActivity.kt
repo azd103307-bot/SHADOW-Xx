@@ -52,7 +52,8 @@ class ConstructionActivity : Activity() {
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
         val third=LinearLayout(this).apply{gravity=Gravity.CENTER}
-        btn(third,"تراجع"){scene.renderer.removeLast()}
+        btn(third,"تراجع"){scene.renderer.undo()}
+        btn(third,"إعادة"){scene.renderer.redo()}
         btn(third,"مسح الكل"){scene.renderer.clear()}
         btn(third,"رجوع"){finish()}
         controls.addView(third)
@@ -186,6 +187,11 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
 private class BuildRenderer:GLSurfaceView.Renderer{
     data class Part(val kind:String,val x:Float,val y:Float,val z:Float,val sx:Float,val sy:Float,val sz:Float,val nailed:Boolean)
     private val parts=mutableListOf<Part>()
+    private val undoStack=java.util.ArrayDeque<List<Part>>()
+    private val redoStack=java.util.ArrayDeque<List<Part>>()
+    private fun remember(){if(undoStack.size>=40)undoStack.removeFirst();undoStack.addLast(parts.toList());redoStack.clear()}
+    fun undo(){synchronized(parts){if(undoStack.isNotEmpty()){redoStack.addLast(parts.toList());parts.clear();parts.addAll(undoStack.removeLast());selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}}
+    fun redo(){synchronized(parts){if(redoStack.isNotEmpty()){undoStack.addLast(parts.toList());parts.clear();parts.addAll(redoStack.removeLast());selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}}
     @Volatile var angleY=35f
     @Volatile var angleX=22f
     @Volatile var cameraDistance=9f
@@ -270,8 +276,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
         }
     }
-    fun addRow(){synchronized(parts){for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing));selectedIndex=parts.lastIndex}}
-    fun addWall(){synchronized(parts){for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing))};selectedIndex=parts.lastIndex}}
+    fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing));selectedIndex=parts.lastIndex}}
+    fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
         synchronized(parts){
             var best=-1;var bestDist=Float.MAX_VALUE
@@ -288,18 +294,18 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         }
     }
     fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();parts[selectedIndex]=p.copy(x=p.x+rx,z=p.z+rz)}}}
-    fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices)parts.removeAt(selectedIndex);selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
+    fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts.removeAt(selectedIndex)};selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
     fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
-    fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
+    fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
     fun selectLast(){synchronized(parts){selected=parts.lastIndex;selectedIndex=parts.lastIndex}}
     private var selected=-1
-    fun duplicateLast(){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex;selectedIndex=parts.lastIndex}else if(parts.isNotEmpty()){val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selectedIndex=parts.lastIndex}}}
-    fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
+    fun duplicateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex;selectedIndex=parts.lastIndex}else if(parts.isNotEmpty()){remember();val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selectedIndex=parts.lastIndex}}}
+    fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){remember();val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
     fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).toString()}}
     fun importProject(data:String){try{val a=org.json.JSONObject(data).getJSONArray("parts");synchronized(parts){parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))}}}catch(_:Exception){}}
     fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب: $wood\\nالحجم التقريبي: %.3f م³".format(volume)}}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
-    fun clear(){synchronized(parts){parts.clear();selectedIndex=-1}}
+    fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
     private fun shader(type:Int,src:String):Int{val s=GLES20.glCreateShader(type);GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);return s}
 }
