@@ -591,26 +591,31 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val dims=dimensionsFor(kind)
         parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing))
     }}
-    fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
+    fun groundPointAt(sx:Float,sy:Float,w:Int,h:Int):Pair<Float,Float>?{
         val width=w.coerceAtLeast(1);val height=h.coerceAtLeast(1)
         val viewM=FloatArray(16);val projM=FloatArray(16);val vp=FloatArray(16);val inverse=FloatArray(16)
         Matrix.setLookAtM(viewM,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
         Matrix.rotateM(viewM,0,angleX,1f,0f,0f);Matrix.rotateM(viewM,0,angleY,0f,1f,0f)
         Matrix.perspectiveM(projM,0,45f,width.toFloat()/height,.1f,100f)
         Matrix.multiplyMM(vp,0,projM,0,viewM,0)
-        if(!Matrix.invertM(inverse,0,vp,0))return
+        if(!Matrix.invertM(inverse,0,vp,0))return null
         val nx=2f*sx/width-1f;val ny=1f-2f*sy/height
         val near=FloatArray(4);val far=FloatArray(4)
         Matrix.multiplyMV(near,0,inverse,0,floatArrayOf(nx,ny,-1f,1f),0)
         Matrix.multiplyMV(far,0,inverse,0,floatArrayOf(nx,ny,1f,1f),0)
-        if(abs(near[3])<1e-6f||abs(far[3])<1e-6f)return
+        if(abs(near[3])<1e-6f||abs(far[3])<1e-6f)return null
         for(i in 0..2){near[i]/=near[3];far[i]/=far[3]}
         val dy=far[1]-near[1]
-        if(abs(dy)<1e-6f)return
+        if(abs(dy)<1e-6f)return null
         val t=-near[1]/dy
-        if(t<0f||!t.isFinite())return
+        if(t<0f||!t.isFinite())return null
         val x=(near[0]+(far[0]-near[0])*t).coerceIn(-30f,30f)
         val z=(near[2]+(far[2]-near[2])*t).coerceIn(-30f,30f)
+        return x to z
+    }
+    fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
+        val point=groundPointAt(sx,sy,w,h)?:return
+        val x=point.first;val z=point.second
         val placeX=if(snapEnabled)round(x*10f)/10f else x
         val placeZ=if(snapEnabled)round(z*10f)/10f else z
         synchronized(parts){
