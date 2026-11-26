@@ -1,6 +1,7 @@
 package com.shadow.xx
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
