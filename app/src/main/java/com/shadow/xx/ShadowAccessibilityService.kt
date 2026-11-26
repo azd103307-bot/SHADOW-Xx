@@ -89,18 +89,10 @@ class ShadowAccessibilityService : AccessibilityService() {
             Toast.makeText(this, "لم أجد نصاً قابلاً للقراءة في هذه الشاشة", Toast.LENGTH_LONG).show()
             return
         }
-        val input = EditText(this).apply {
-            setText(value); setTextIsSelectable(true); textSize = 16f; minLines = 5
-        }
-        AlertDialog.Builder(this).setTitle("النص المستخرج — حدّد وانسخ")
-            .setView(input)
-            .setPositiveButton("نسخ الكل") { _, _ ->
-                val clip = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                clip.setPrimaryClip(ClipData.newPlainText("نص الشاشة", input.text))
-                Toast.makeText(this, "تم نسخ النص", Toast.LENGTH_SHORT).show()
-            }.setNeutralButton("تحديد الكل") { _, _ ->
-                input.requestFocus(); input.selectAll()
-            }.setNegativeButton("إغلاق", null).show()
+        val intent = Intent(this, TextResultActivity::class.java)
+            .putExtra("screen_text", value)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
     private fun collect(node: AccessibilityNodeInfo, out: StringBuilder) {
         val text = node.text?.toString()?.trim()
