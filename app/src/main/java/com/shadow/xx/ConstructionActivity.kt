@@ -97,10 +97,40 @@ class ConstructionActivity : Activity() {
         btn(seventh,"تصدير ملف المشروع"){exportProjectFile()}
         btn(seventh,"استيراد ملف مشروع"){importProjectFile()}
         btn(seventh,"قياس من صورة"){chooseMeasurePhoto()}
+        btn(seventh,"حذف مشروع"){deleteProject()}
         controls.addView(seventh)
+        val eighth=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(eighth,"شرح وخطوات المشروع"){editProjectNotes()}
+        controls.addView(eighth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
+    }
+    private fun deleteProject(){
+        val prefs=getSharedPreferences("shadow_build_projects",MODE_PRIVATE)
+        val names=prefs.getStringSet("names",emptySet())?.toList()?.sorted()?:emptyList()
+        if(names.isEmpty()){Toast.makeText(this,"لا توجد مشاريع لحذفها",Toast.LENGTH_SHORT).show();return}
+        AlertDialog.Builder(this).setTitle("اختر المشروع المراد حذفه").setItems(names.toTypedArray()){_,which->
+            val name=names[which]
+            AlertDialog.Builder(this).setMessage("حذف المشروع «$name» نهائياً من هذا الجهاز؟")
+                .setNegativeButton("إلغاء",null).setPositiveButton("حذف"){_,_->
+                    val updated=names.toMutableSet().apply{remove(name)}
+                    prefs.edit().remove("project_"+name).putStringSet("names",updated).apply()
+                    info.text="تم حذف المشروع: $name"
+                }.show()
+        }.setNegativeButton("إغلاق",null).show()
+    }
+    private fun editProjectNotes(){
+        val editor=EditText(this).apply{
+            hint="اكتب شرح البناء وخطوات التنفيذ بالترتيب..."
+            setText(scene.renderer.getNotes())
+            minLines=5;gravity=Gravity.TOP;inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        }
+        AlertDialog.Builder(this).setTitle("شرح المشروع وخطواته").setView(editor)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ"){_,_->
+                scene.renderer.setNotes(editor.text.toString())
+                info.text="تم حفظ شرح المشروع ضمن ملفه"
+            }.show()
     }
     private fun chooseMeasurePhoto(){
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="image/*"}
@@ -312,6 +342,9 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun captureWhenReady(callback:(Bitmap)->Unit){captureCallback=callback}
     data class Part(val kind:String,val x:Float,val y:Float,val z:Float,val sx:Float,val sy:Float,val sz:Float,val nailed:Boolean)
     private val parts=mutableListOf<Part>()
+    @Volatile private var projectNotes=""
+    fun setNotes(value:String){projectNotes=value}
+    fun getNotes():String=projectNotes
     private val undoStack=java.util.ArrayDeque<List<Part>>()
     private val redoStack=java.util.ArrayDeque<List<Part>>()
     private fun remember(){if(undoStack.size>=40)undoStack.removeFirst();undoStack.addLast(parts.toList());redoStack.clear()}
@@ -467,9 +500,9 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun duplicateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex;selectedIndex=parts.lastIndex}else if(parts.isNotEmpty()){remember();val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selectedIndex=parts.lastIndex}}}
     fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){remember();val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
-    fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).toString()}}
-    fun importProject(data:String){try{val a=org.json.JSONObject(data).getJSONArray("parts");synchronized(parts){parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))}}}catch(_:Exception){}}
-    fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب: $wood\\nالحجم التقريبي: %.3f م³".format(volume)}}
+    fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).put("notes",projectNotes).toString()}}
+    fun importProject(data:String){try{val root=org.json.JSONObject(data);projectNotes=root.optString("notes","");val a=root.getJSONArray("parts");synchronized(parts){parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))}}}catch(_:Exception){}}
+    fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب والقطع الأخرى: $wood\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(volume)}}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
     fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
     private fun shader(type:Int,src:String):Int{val s=GLES20.glCreateShader(type);GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);return s}
