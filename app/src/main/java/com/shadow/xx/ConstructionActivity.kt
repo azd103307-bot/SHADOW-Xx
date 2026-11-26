@@ -66,6 +66,9 @@ class ConstructionActivity : Activity() {
         btn(cameraRow,"جانب"){scene.renderer.setView("side")}
         btn(cameraRow,"الشبكة"){scene.renderer.gridVisible=!scene.renderer.gridVisible;info.text=if(scene.renderer.gridVisible)"شبكة القياس ظاهرة" else "شبكة القياس مخفية"}
         controls.addView(cameraRow)
+        val snapRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(snapRow,"محاذاة الشبكة"){scene.renderer.snapEnabled=!scene.renderer.snapEnabled;info.text=if(scene.renderer.snapEnabled)"المحاذاة إلى 10 سم مفعّلة" else "المحاذاة متوقفة"}
+        controls.addView(snapRow)
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
         val third=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -386,6 +389,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile var woodLength=3f
     @Volatile var nailing=false
     @Volatile var gridVisible=true
+    @Volatile var snapEnabled=true
     private var selectedIndex=-1
     private var viewportW=1
     private var viewportH=1
@@ -488,10 +492,12 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
         val x=((sx/w.coerceAtLeast(1).toFloat())-.5f)*6f
         val z=((.5f-(sy/h.coerceAtLeast(1).toFloat()))*6f)
+        val placeX=if(snapEnabled)round(x*10f)/10f else x
+        val placeZ=if(snapEnabled)round(z*10f)/10f else z
         synchronized(parts){
             remember()
             val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
-            parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
+            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
         }
     }
     fun addOnTop(kind:String){synchronized(parts){
@@ -521,7 +527,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         }
     }
     fun beginMove(){synchronized(parts){if(selectedIndex in parts.indices)remember()}}
-    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();parts[selectedIndex]=p.copy(x=p.x+rx,z=p.z+rz)}}}
+    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();val nx=p.x+rx;val nz=p.z+rz;parts[selectedIndex]=p.copy(x=if(snapEnabled)round(nx*10f)/10f else nx,z=if(snapEnabled)round(nz*10f)/10f else nz)}}}
     fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts.removeAt(selectedIndex)};selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
     fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
     fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
