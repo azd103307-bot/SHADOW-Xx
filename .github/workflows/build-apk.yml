@@ -9,6 +9,10 @@ on:
       - '**.xml'
       - 'gradle.properties'
       - '.github/workflows/build-apk.yml'
+concurrency:
+  group: shadow-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
