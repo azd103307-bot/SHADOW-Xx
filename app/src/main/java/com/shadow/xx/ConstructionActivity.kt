@@ -77,10 +77,12 @@ class ConstructionActivity : Activity() {
         btn(fourth,"نسخ قطعة"){scene.renderer.duplicateLast();info.text="تم نسخ القطعة"}
         btn(fourth,"تدوير 90°"){scene.renderer.rotateLast();info.text="تم تدوير القطعة"}
         btn(fourth,"حذف المحددة"){scene.renderer.deleteSelected();info.text="تم حذف القطعة المحددة"}
-        btn(fourth,"الأبعاد"){editSelectedDimensions()}
-        btn(fourth,"رفع"){scene.renderer.raiseSelected(.10f)}
-        btn(fourth,"خفض"){scene.renderer.raiseSelected(-.10f)}
         controls.addView(fourth)
+        val dimensionRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(dimensionRow,"الأبعاد"){editSelectedDimensions()}
+        btn(dimensionRow,"رفع"){scene.renderer.raiseSelected(.10f)}
+        btn(dimensionRow,"خفض"){scene.renderer.raiseSelected(-.10f)}
+        controls.addView(dimensionRow)
         val fifth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(fifth,"حفظ المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("project",scene.renderer.exportProject()).apply();info.text="تم حفظ المشروع على الجهاز"}
         btn(fifth,"فتح المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).getString("project",null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع"}?:run{info.text="لا يوجد مشروع محفوظ"}}
