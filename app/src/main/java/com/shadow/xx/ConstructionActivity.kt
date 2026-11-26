@@ -333,7 +333,9 @@ class ConstructionActivity : Activity() {
         val blockH=field("ارتفاع البلوك بالمتر","0.20")
         val joint=field("سماكة المونة بين البلوكات بالمتر","0.01")
         val price=field("سعر البلوكة الواحدة (اختياري)","0")
-        val fields=listOf(length,height,thickness,opening,blockL,blockH,joint,price)
+        val cementPrice=field("سعر كيس الإسمنت 50 كجم (اختياري)","0")
+        val sandPrice=field("سعر متر الرمل المكعب (اختياري)","0")
+        val fields=listOf(length,height,thickness,opening,blockL,blockH,joint,price,cementPrice,sandPrice)
         fields.forEach{box.addView(it)}
         AlertDialog.Builder(this).setTitle("التمتير وحساب البلوك").setView(ScrollView(this).apply{addView(box)})
             .setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
@@ -345,14 +347,20 @@ class ConstructionActivity : Activity() {
                 val bh=blockH.text.toString().toDoubleOrNull()?:.2
                 val j=joint.text.toString().toDoubleOrNull()?:.01
                 val unit=price.text.toString().toDoubleOrNull()?:0.0
+                val cementUnit=cementPrice.text.toString().toDoubleOrNull()?:0.0
+                val sandUnit=sandPrice.text.toString().toDoubleOrNull()?:0.0
                 val gross=l*h
                 val net=(gross-op).coerceAtLeast(0.0)
                 val module=(bl+j)*(bh+j)
                 val count=if(module>0)kotlin.math.ceil(net/module).toInt() else 0
                 val volume=net*t
-                val cost=count*unit
                 val mortar=(volume-count*bl*bh*t).coerceAtLeast(0.0)
-                val result="مساحة الجدار الإجمالية: %.2f م²\\nمساحة الفتحات: %.2f م²\\nالمساحة الصافية: %.2f م²\\nحجم الجدار التقريبي: %.3f م³\\nعدد البلوك التقديري: %d قطعة\\nحجم المونة التقريبي: %.3f م³\\nتكلفة البلوك حسب السعر المدخل: %.2f".format(gross,op,net,volume,count,mortar,cost)
+                val dryMortar=mortar*1.33
+                val cementBags=kotlin.math.ceil((dryMortar/5.0*1440.0)/50.0).toInt()
+                val sandVolume=dryMortar*4.0/5.0
+                val costBlocks=count*unit;val costCement=cementBags*cementUnit;val costSand=sandVolume*sandUnit
+                val totalCost=costBlocks+costCement+costSand
+                val result="مساحة الجدار الإجمالية: %.2f م²\\nمساحة الفتحات: %.2f م²\\nالمساحة الصافية: %.2f م²\\nحجم الجدار التقريبي: %.3f م³\\nعدد البلوك التقديري: %d قطعة\\nحجم المونة التقريبي: %.3f م³\\nأكياس الإسمنت (50 كجم) تقديرياً: %d\\nالرمل التقديري: %.3f م³\\nتكلفة البلوك: %.2f\\nتكلفة الإسمنت: %.2f\\nتكلفة الرمل: %.2f\\nإجمالي المواد المقدّر: %.2f".format(gross,op,net,volume,count,mortar,cementBags,sandVolume,costBlocks,costCement,costSand,totalCost)
                 AlertDialog.Builder(this).setTitle("نتيجة التمتير").setMessage(result)
                     .setNeutralButton("نسخ التقرير"){_,_->(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("التمتير",result))}
                     .setPositiveButton("إغلاق",null).show()
