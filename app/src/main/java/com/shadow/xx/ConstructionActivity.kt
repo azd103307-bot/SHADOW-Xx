@@ -586,7 +586,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val boards=parts.count{it.kind=="لوح"};val squares=parts.count{it.kind=="مربع"}
         val supports=parts.count{it.kind=="دعامة"};val molds=parts.count{it.kind=="قالب"}
         val columns=parts.count{it.kind=="عمود"};val beams=parts.count{it.kind=="كمرة"};val slabs=parts.count{it.kind=="بلاطة"}
-        val woodLength=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{it.sx.toDouble()}
+        val woodLength=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else it.sx.toDouble()}
         val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()}
         return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوك: $blocks\\nالطوب: $bricks\\nألواح الخشب: $boards\\nمربعات الخشب: $squares\\nالدعامات: $supports\\nقوالب الصب: $molds\\nالأعمدة الخرسانية: $columns\\nالكمرات: $beams\\nالبلاطات: $slabs\\nإجمالي أطوال قطع الخشب: %.2f م\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(woodLength,volume)
     }}
