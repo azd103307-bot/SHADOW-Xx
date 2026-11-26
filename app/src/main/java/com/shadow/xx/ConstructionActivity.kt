@@ -272,6 +272,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val x=((sx/w.coerceAtLeast(1).toFloat())-.5f)*6f
         val z=((.5f-(sy/h.coerceAtLeast(1).toFloat()))*6f)
         synchronized(parts){
+            remember()
             val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
             parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
         }
