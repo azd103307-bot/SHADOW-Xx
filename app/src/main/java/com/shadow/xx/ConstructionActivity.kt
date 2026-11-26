@@ -171,7 +171,10 @@ class ConstructionActivity : Activity() {
         val blockLength=field("طول البلوك بالمتر","0.40")
         val blockHeight=field("ارتفاع البلوك بالمتر","0.20")
         val joint=field("فاصل المونة بالمتر","0.01")
-        listOf(length,height,thickness,blockLength,blockHeight,joint).forEach{panel.addView(it)}
+        val openingWidth=field("عرض فتحة باب أو نافذة (0 بدون فتحة)","0")
+        val openingHeight=field("ارتفاع الفتحة بالمتر","0")
+        val openingBottom=field("ارتفاع بداية الفتحة عن الأرض بالمتر","0")
+        listOf(length,height,thickness,blockLength,blockHeight,joint,openingWidth,openingHeight,openingBottom).forEach{panel.addView(it)}
         AlertDialog.Builder(this).setTitle("إنشاء جدار بمقاساتك").setView(ScrollView(this).apply{addView(panel)})
             .setNegativeButton("إلغاء",null).setPositiveButton("إنشاء"){_,_->
                 val l=length.text.toString().toFloatOrNull()?:0f
@@ -180,13 +183,17 @@ class ConstructionActivity : Activity() {
                 val bl=blockLength.text.toString().toFloatOrNull()?:0f
                 val bh=blockHeight.text.toString().toFloatOrNull()?:0f
                 val j=joint.text.toString().toFloatOrNull()?:0f
-                if(!l.isFinite()||!h.isFinite()||!t.isFinite()||!bl.isFinite()||!bh.isFinite()||!j.isFinite()||
-                    l !in .1f..30f||h !in .1f..20f||t !in .05f..2f||bl !in .05f..2f||bh !in .05f..1f||j !in 0f..0.05f){
+                val ow=openingWidth.text.toString().toFloatOrNull()?:0f
+                val oh=openingHeight.text.toString().toFloatOrNull()?:0f
+                val ob=openingBottom.text.toString().toFloatOrNull()?:0f
+                if(!l.isFinite()||!h.isFinite()||!t.isFinite()||!bl.isFinite()||!bh.isFinite()||!j.isFinite()||!ow.isFinite()||!oh.isFinite()||!ob.isFinite()||
+                    l !in .1f..30f||h !in .1f..20f||t !in .05f..2f||bl !in .05f..2f||bh !in .05f..1f||j !in 0f..0.05f||
+                    ow !in 0f..l||oh<0f||ob<0f||ob+oh>h){
                     Toast.makeText(this,"تحقق من الأبعاد المدخلة",Toast.LENGTH_LONG).show()
                     return@setPositiveButton
                 }
-                val added=scene.renderer.addCustomWall(l,h,t,bl,bh,j)
-                if(added>0)info.text="تم إنشاء الجدار: $added بلوكة، بطول $l م وارتفاع $h م"
+                val added=scene.renderer.addCustomWall(l,h,t,bl,bh,j,ow,oh,ob)
+                if(added>0)info.text="تم إنشاء الجدار: $added بلوكة، بطول $l م وارتفاع $h م"+if(ow>0f&&oh>0f)" مع فتحة" else ""
                 else info.text="الجدار كبير جداً أو تعذر إنشاؤه"
             }.show()
     }
@@ -700,12 +707,15 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         selectedIndex=parts.lastIndex
     }}
     fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceIn(p.sy/2,100f))}}}
-    fun addCustomWall(length:Float,height:Float,thickness:Float,blockLength:Float,blockHeight:Float,joint:Float):Int{
+    fun addCustomWall(length:Float,height:Float,thickness:Float,blockLength:Float,blockHeight:Float,joint:Float,openingWidth:Float=0f,openingHeight:Float=0f,openingBottom:Float=0f):Int{
         val moduleX=blockLength+joint
         val moduleY=blockHeight+joint
         val columns=kotlin.math.ceil(length/moduleX).toInt()+2
         val rows=kotlin.math.ceil(height/moduleY).toInt()
         if(columns<=0||rows<=0||columns.toLong()*rows.toLong()>3000L)return 0
+        val openingLeft=-openingWidth/2f
+        val openingRight=openingWidth/2f
+        val openingTop=openingBottom+openingHeight
         synchronized(parts){
             remember()
             val before=parts.size
@@ -719,7 +729,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
                     val top=minOf(bottom+blockHeight,height)
                     val actualWidth=right-left
                     val actualHeight=top-bottom
-                    if(actualWidth>.02f&&actualHeight>.02f){
+                    val overlapsOpening=openingWidth>0f&&openingHeight>0f&&right>openingLeft&&left<openingRight&&top>openingBottom&&bottom<openingTop
+                    if(actualWidth>.02f&&actualHeight>.02f&&!overlapsOpening){
                         parts.add(Part("بلوك",(left+right)/2f,bottom+actualHeight/2f,0f,actualWidth,actualHeight,thickness,nailing,activeColor))
                     }
                 }
