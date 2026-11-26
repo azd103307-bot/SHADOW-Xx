@@ -423,10 +423,11 @@ class ConstructionActivity : Activity() {
         val blockL=field("طول البلوك بالمتر","0.40")
         val blockH=field("ارتفاع البلوك بالمتر","0.20")
         val joint=field("سماكة المونة بين البلوكات بالمتر","0.01")
+        val waste=field("نسبة هدر البلوك %","5")
         val price=field("سعر البلوكة الواحدة (اختياري)","0")
         val cementPrice=field("سعر كيس الإسمنت 50 كجم (اختياري)","0")
         val sandPrice=field("سعر متر الرمل المكعب (اختياري)","0")
-        val fields=listOf(length,height,thickness,opening,blockL,blockH,joint,price,cementPrice,sandPrice)
+        val fields=listOf(length,height,thickness,opening,blockL,blockH,joint,waste,price,cementPrice,sandPrice)
         fields.forEach{box.addView(it)}
         AlertDialog.Builder(this).setTitle("التمتير وحساب البلوك").setView(ScrollView(this).apply{addView(box)})
             .setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
@@ -437,25 +438,27 @@ class ConstructionActivity : Activity() {
                 val bl=blockL.text.toString().toDoubleOrNull()?:.4
                 val bh=blockH.text.toString().toDoubleOrNull()?:.2
                 val j=joint.text.toString().toDoubleOrNull()?:.01
+                val wastePct=waste.text.toString().toDoubleOrNull()?:5.0
                 val unit=(price.text.toString().toDoubleOrNull()?:0.0).coerceAtLeast(0.0)
                 val cementUnit=(cementPrice.text.toString().toDoubleOrNull()?:0.0).coerceAtLeast(0.0)
                 val sandUnit=(sandPrice.text.toString().toDoubleOrNull()?:0.0).coerceAtLeast(0.0)
                 val gross=l*h
-                if(l<=0||h<=0||t<=0||bl<=0||bh<=0||j<0||op<0||op>gross){
+                if(l<=0||h<=0||t<=0||bl<=0||bh<=0||j<0||wastePct !in 0.0..50.0||op<0||op>gross){
                     Toast.makeText(this,"تحقق من الأبعاد والفتحات؛ يجب أن تكون القيم صحيحة وموجبة.",Toast.LENGTH_LONG).show()
                     return@setPositiveButton
                 }
                 val net=(gross-op).coerceAtLeast(0.0)
                 val module=(bl+j)*(bh+j)
-                val count=if(module>0)kotlin.math.ceil(net/module).toInt() else 0
+                val baseCount=if(module>0)kotlin.math.ceil(net/module).toInt() else 0
+                val count=kotlin.math.ceil(baseCount*(1.0+wastePct/100.0)).toInt()
                 val volume=net*t
-                val mortar=(volume-count*bl*bh*t).coerceAtLeast(0.0)
+                val mortar=(volume-baseCount*bl*bh*t).coerceAtLeast(0.0)
                 val dryMortar=mortar*1.33
                 val cementBags=kotlin.math.ceil((dryMortar/5.0*1440.0)/50.0).toInt()
                 val sandVolume=dryMortar*4.0/5.0
                 val costBlocks=count*unit;val costCement=cementBags*cementUnit;val costSand=sandVolume*sandUnit
                 val totalCost=costBlocks+costCement+costSand
-                val result="مساحة الجدار الإجمالية: %.2f م²\\nمساحة الفتحات: %.2f م²\\nالمساحة الصافية: %.2f م²\\nحجم الجدار التقريبي: %.3f م³\\nعدد البلوك التقديري: %d قطعة\\nحجم المونة التقريبي: %.3f م³\\nأكياس الإسمنت (50 كجم) تقديرياً: %d\\nالرمل التقديري: %.3f م³\\nتكلفة البلوك: %.2f\\nتكلفة الإسمنت: %.2f\\nتكلفة الرمل: %.2f\\nإجمالي المواد المقدّر: %.2f\\n\\nملاحظة: تقدير الإسمنت والرمل على خلطة 1:4 ومعامل جاف 1.33، ولا يشمل الهدر أو الفاقد.".format(gross,op,net,volume,count,mortar,cementBags,sandVolume,costBlocks,costCement,costSand,totalCost)
+                val result="مساحة الجدار الإجمالية: %.2f م²\\nمساحة الفتحات: %.2f م²\\nالمساحة الصافية: %.2f م²\\nحجم الجدار التقريبي: %.3f م³\\nعدد البلوك الأساسي: %d قطعة\\nنسبة الهدر: %.1f%%\\nعدد البلوك بعد الهدر: %d قطعة\\nحجم المونة التقريبي: %.3f م³\\nأكياس الإسمنت (50 كجم) تقديرياً: %d\\nالرمل التقديري: %.3f م³\\nتكلفة البلوك: %.2f\\nتكلفة الإسمنت: %.2f\\nتكلفة الرمل: %.2f\\nإجمالي المواد المقدّر: %.2f\\n\\nملاحظة: تقدير الإسمنت والرمل على خلطة 1:4 ومعامل جاف 1.33، والهدر مطبق على عدد البلوك فقط. الأرقام تقديرية.".format(gross,op,net,volume,baseCount,wastePct,count,mortar,cementBags,sandVolume,costBlocks,costCement,costSand,totalCost)
                 AlertDialog.Builder(this).setTitle("نتيجة التمتير").setMessage(result)
                     .setNeutralButton("نسخ التقرير"){_,_->(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("التمتير",result))}
                     .setPositiveButton("إغلاق",null).show()
