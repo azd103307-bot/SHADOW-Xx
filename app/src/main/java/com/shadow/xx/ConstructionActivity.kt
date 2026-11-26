@@ -380,11 +380,12 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
     var onTap:((Float,Float)->Unit)?=null
     var onSelect:(()->Unit)?=null
     private var draggingPart=false
+    private var moveHistoryStarted=false
     private var lastX=0f;private var lastY=0f;private var lastDistance=0f;private var moved=false
     init{setEGLContextClientVersion(2);setRenderer(renderer);renderMode=RENDERMODE_CONTINUOUSLY}
     override fun onTouchEvent(e:MotionEvent):Boolean{
         when(e.actionMasked){
-            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);if(draggingPart){renderer.beginMove();onSelect?.invoke()};return true}
+            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;moveHistoryStarted=false;draggingPart=renderer.pick(e.x,e.y,width,height);if(draggingPart)onSelect?.invoke();return true}
             MotionEvent.ACTION_POINTER_DOWN->{lastDistance=distance(e);return true}
             MotionEvent.ACTION_MOVE->{
                 if(e.pointerCount>=2){
@@ -392,7 +393,10 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
                 }else{
                     val dx=e.x-lastX;val dy=e.y-lastY
                     if(abs(dx)+abs(dy)>3)moved=true
-                    if(draggingPart)renderer.moveSelected(dx,dy,width,height) else renderer.rotate(dx*.45f,dy*.35f);lastX=e.x;lastY=e.y
+                    if(draggingPart){
+                        if(moved){if(!moveHistoryStarted){renderer.beginMove();moveHistoryStarted=true};renderer.moveSelected(dx,dy,width,height)}
+                    }else renderer.rotate(dx*.45f,dy*.35f)
+                    lastX=e.x;lastY=e.y
                 };return true
             }
             MotionEvent.ACTION_POINTER_UP->{lastDistance=0f;return true}
