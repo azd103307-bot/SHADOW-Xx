@@ -53,6 +53,7 @@ class ConstructionActivity : Activity() {
         btn(buildRow,"صف بلوك"){scene.renderer.addRow();info.text="تمت إضافة صف بلوكات"}
         btn(buildRow,"جدار"){scene.renderer.addWall();info.text="تمت إضافة جدار من عدة طبقات"}
         btn(buildRow,"قالب صب"){selected="قالب";info.text="المس المشهد لإضافة قالب الصب"}
+        btn(buildRow,"قطعة فوقها"){scene.renderer.addOnTop(selected);info.text="أضيفت قطعة فوق القطعة المحددة"}
         controls.addView(buildRow)
         val cameraRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(cameraRow,"منظور"){scene.renderer.setView("perspective")}
@@ -75,6 +76,8 @@ class ConstructionActivity : Activity() {
         btn(fourth,"تدوير 90°"){scene.renderer.rotateLast();info.text="تم تدوير القطعة"}
         btn(fourth,"حذف المحددة"){scene.renderer.deleteSelected();info.text="تم حذف القطعة المحددة"}
         btn(fourth,"الأبعاد"){editSelectedDimensions()}
+        btn(fourth,"رفع"){scene.renderer.raiseSelected(.10f)}
+        btn(fourth,"خفض"){scene.renderer.raiseSelected(-.10f)}
         controls.addView(fourth)
         val fifth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(fifth,"حفظ المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("project",scene.renderer.exportProject()).apply();info.text="تم حفظ المشروع على الجهاز"}
@@ -339,6 +342,15 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
         }
     }
+    fun addOnTop(kind:String){synchronized(parts){
+        if(selectedIndex !in parts.indices)return
+        remember()
+        val base=parts[selectedIndex]
+        val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
+        parts.add(Part(kind,base.x,base.y+base.sy/2+dims.second/2,base.z,dims.first,dims.second,dims.third,nailing))
+        selectedIndex=parts.lastIndex
+    }}
+    fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceAtLeast(p.sy/2))}}}
     fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing));selectedIndex=parts.lastIndex}}
     fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
