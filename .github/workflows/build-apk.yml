@@ -33,7 +33,7 @@ jobs:
       - name: Verify installable APK
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='com.shadow.xx' versionCode='3' versionName='1.2.0'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='com.shadow.xx' versionCode='4' versionName='1.3.0'"
           sha256sum app/build/outputs/apk/debug/app-debug.apk
       - name: Upload installable debug APK
         if: success()
