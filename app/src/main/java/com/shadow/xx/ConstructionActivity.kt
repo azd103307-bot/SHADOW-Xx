@@ -666,7 +666,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun exportDxf():String=synchronized(parts){
         val out=StringBuilder()
         fun pair(code:Int,value:String){out.append(code).append("\r\n").append(value).append("\r\n")}
-        pair(0,"SECTION");pair(2,"HEADER");pair(9,"$"+"$INSUNITS");pair(70,"6")
+        pair(0,"SECTION");pair(2,"HEADER");pair(9,"\$INSUNITS");pair(70,"6")
         pair(0,"ENDSEC");pair(0,"SECTION");pair(2,"ENTITIES")
         parts.forEachIndexed{index,p->
             val x1=p.x-p.sx/2;val x2=p.x+p.sx/2
@@ -679,7 +679,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
                 pair(11,b.first.toString());pair(21,b.second.toString());pair(31,"0")
             }
             pair(0,"TEXT");pair(8,"LABELS");pair(10,p.x.toString());pair(20,p.z.toString());pair(30,"0")
-            pair(40,"0.12");pair(1,"${p.kind} #${index+1}");pair(50,"0")
+            val label=when(p.kind){"بلوك"->"BLOCK";"طوب"->"BRICK";"لوح"->"WOOD_BOARD";"مربع"->"WOOD_SQUARE";"دعامة"->"SUPPORT";"قالب"->"FORMWORK";"عمود"->"COLUMN";"كمرة"->"BEAM";"بلاطة"->"SLAB";else->"PART"}
+            pair(40,"0.12");pair(1,"${label}_${index+1}");pair(50,"0")
         }
         pair(0,"ENDSEC");pair(0,"EOF")
         out.toString()
