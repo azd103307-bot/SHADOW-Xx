@@ -34,6 +34,7 @@ class MainActivity : Activity() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             Toast.makeText(this, "فعّل خدمة SHADOW Xx من خدمات إمكانية الوصول", Toast.LENGTH_LONG).show()
         }, lp())
+        root.addView(button("افتح ورشة البناء ثلاثية الأبعاد") { startActivity(Intent(this, ConstructionActivity::class.java)) }, lp())
         root.addView(button("اختيار التطبيق الأول") { chooseApp(1) }, lp())
         root.addView(button("اختيار التطبيق الثاني") { chooseApp(2) }, lp())
         val hint = TextView(this).apply {
