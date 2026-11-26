@@ -20,25 +20,25 @@ class MainActivity : Activity() {
             setBackgroundColor(0xFF101827.toInt())
         }
         val title = TextView(this).apply {
-            text = "SHADOW Xx"; textSize = 30f
+            text = "SHADOW BUILD"; textSize = 30f
             setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(8))
         }
         val sub = TextView(this).apply {
-            text = "شريط أدوات عائم للتحكم السريع ونسخ نص الشاشة"
+            text = "مساحة عمل عربية حرة للبناء والتشييد والتصميم ثلاثي الأبعاد"
             textSize = 16f; setTextColor(0xFFCBD5E1.toInt()); gravity = Gravity.CENTER
             setPadding(0, 0, 0, dp(24))
         }
         root.addView(title); root.addView(sub)
+        root.addView(button("ابدأ البناء والتصميم ثلاثي الأبعاد") { startActivity(Intent(this, ConstructionActivity::class.java)) }, lp())
         root.addView(button("تفعيل الشريط العائم") {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             Toast.makeText(this, "فعّل خدمة SHADOW Xx من خدمات إمكانية الوصول", Toast.LENGTH_LONG).show()
         }, lp())
-        root.addView(button("افتح ورشة البناء ثلاثية الأبعاد") { startActivity(Intent(this, ConstructionActivity::class.java)) }, lp())
         root.addView(button("اختيار التطبيق الأول") { chooseApp(1) }, lp())
         root.addView(button("اختيار التطبيق الثاني") { chooseApp(2) }, lp())
         val hint = TextView(this).apply {
-            text = "بعد تفعيل الخدمة سيظهر الشريط فوق التطبيقات. زر «نص» يجمع النصوص التي تسمح واجهة التطبيق بقراءتها، ثم يتيح تحديدها ونسخها. قد لا تعمل القراءة داخل الشاشات المحمية أو النصوص المرسومة داخل الصور."
+            text = "ابدأ من ورشة البناء: أضف البلوكات والخشب بنفسك، كوّن الجدران، قِس الكميات، واحفظ مشاريعك. أدوات الشريط العائم واختيار التطبيقات تبقى ميزات مساعدة منفصلة."
             textSize = 15f; setTextColor(0xFFE2E8F0.toInt()); setPadding(0, dp(20), 0, 0)
         }
         root.addView(hint)
