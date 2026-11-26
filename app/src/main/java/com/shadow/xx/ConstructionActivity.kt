@@ -47,8 +47,35 @@ class ConstructionActivity : Activity() {
         btn(third,"تراجع"){scene.renderer.removeLast()}
         btn(third,"مسح الكل"){scene.renderer.clear()}
         btn(third,"رجوع"){finish()}
-        controls.addView(third);root.addView(controls);setContentView(root)
+        controls.addView(third)
+        val fourth=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(fourth,"تحديد آخر قطعة"){scene.renderer.selectLast();info.text="تم تحديد آخر قطعة"}
+        btn(fourth,"نسخ قطعة"){scene.renderer.duplicateLast();info.text="تم نسخ القطعة"}
+        btn(fourth,"تدوير 90°"){scene.renderer.rotateLast();info.text="تم تدوير القطعة"}
+        btn(fourth,"حذف المحددة"){scene.renderer.deleteLast();info.text="تم حذف القطعة"}
+        controls.addView(fourth)
+        val fifth=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(fifth,"حفظ المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("project",scene.renderer.exportProject()).apply();info.text="تم حفظ المشروع على الجهاز"}
+        btn(fifth,"فتح المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).getString("project",null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع"}?:run{info.text="لا يوجد مشروع محفوظ"}}
+        btn(fifth,"التمتير"){measurementDialog()}
+        btn(fifth,"تقرير ونسخ"){val t=scene.renderer.report();(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("تقرير البناء",t));info.text="تم نسخ تقرير الكميات"}
+        controls.addView(fifth)
+        root.addView(controls);setContentView(root)
         scene.onTap={scene.renderer.add(selected)}
+    }
+    private fun measurementDialog(){
+        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,8,24,0)}
+        val length=EditText(this).apply{hint="الطول بالمتر";inputType=8194}
+        val width=EditText(this).apply{hint="العرض بالمتر";inputType=8194}
+        val height=EditText(this).apply{hint="الارتفاع بالمتر";inputType=8194}
+        listOf(length,width,height).forEach{box.addView(it)}
+        AlertDialog.Builder(this).setTitle("حاسبة التمتير").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
+            val l=length.text.toString().toDoubleOrNull()?:0.0
+            val w=width.text.toString().toDoubleOrNull()?:0.0
+            val h=height.text.toString().toDoubleOrNull()?:0.0
+            val area=l*h;val volume=l*w*h;val blocks=if(area>0)kotlin.math.ceil(area/(.4*.2)).toInt() else 0
+            AlertDialog.Builder(this).setTitle("نتيجة الحساب").setMessage("مساحة الجدار: %.2f م²\\nالحجم: %.3f م³\\nالبلوك التقديري (40×20 سم): %d".format(area,volume,blocks)).setPositiveButton("حسناً",null).show()
+        }.show()
     }
     override fun onResume(){super.onResume();if(::scene.isInitialized)scene.onResume()}
     override fun onPause(){if(::scene.isInitialized)scene.onPause();super.onPause()}
@@ -156,6 +183,14 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         }
         parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing))
     }}
+    fun selectLast(){synchronized(parts){selected=parts.lastIndex}}
+    private var selected=-1
+    fun duplicateLast(){synchronized(parts){if(parts.isNotEmpty()){val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex}}}
+    fun rotateLast(){synchronized(parts){if(parts.isNotEmpty()){val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selected=parts.lastIndex}}}
+    fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
+    fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).toString()}}
+    fun importProject(data:String){try{val a=org.json.JSONObject(data).getJSONArray("parts");synchronized(parts){parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))}}}catch(_:Exception){}}
+    fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب: $wood\\nالحجم التقريبي: %.3f م³".format(volume)}}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex)}}
     fun clear(){synchronized(parts){parts.clear()}}
     private fun shader(type:Int,src:String):Int{val s=GLES20.glCreateShader(type);GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);return s}
