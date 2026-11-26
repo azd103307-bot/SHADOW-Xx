@@ -194,7 +194,7 @@ class ConstructionActivity : Activity() {
                     return@setPositiveButton
                 }
                 val added=scene.renderer.addCustomWall(l,h,t,bl,bh,j,ow,oh,ob)
-                if(added>0)info.text="تم إنشاء الجدار: $added بلوكة، بطول $l م وارتفاع $h م"+if(ow>0f&&oh>0f)" مع فتحة" else ""
+                if(added>0)info.text="تم إنشاء الجدار: $added قطعة، بطول $l م وارتفاع $h م"+if(ow>0f&&oh>0f)" مع فتحة" else ""
                 else info.text="الجدار كبير جداً أو تعذر إنشاؤه"
             }.show()
     }
