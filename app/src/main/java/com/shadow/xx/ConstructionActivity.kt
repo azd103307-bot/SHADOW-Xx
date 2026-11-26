@@ -218,6 +218,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     private val finalM=FloatArray(16)
     private val verts=FloatArray(216)
     private lateinit var buffer:FloatBuffer
+    private lateinit var gridBuffer:FloatBuffer
     private val vertexShader="attribute vec4 aPosition;attribute vec4 aColor;uniform mat4 uMVP;varying vec4 vColor;void main(){gl_Position=uMVP*aPosition;vColor=aColor;}"
     private val fragmentShader="precision mediump float;varying vec4 vColor;void main(){gl_FragColor=vColor;}"
     override fun onSurfaceCreated(gl:GL10?,config:EGLConfig?){
@@ -226,6 +227,12 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         program=GLES20.glCreateProgram();GLES20.glAttachShader(program,vs);GLES20.glAttachShader(program,fs);GLES20.glLinkProgram(program)
         posHandle=GLES20.glGetAttribLocation(program,"aPosition");colorHandle=GLES20.glGetAttribLocation(program,"aColor");mvpHandle=GLES20.glGetUniformLocation(program,"uMVP")
         buffer=ByteBuffer.allocateDirect(verts.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        val grid=FloatArray(84*6);var gi=0
+        for(i in 0..20){val v=-5f+i*.5f
+            val lines=arrayOf(floatArrayOf(-5f,.004f,v),floatArrayOf(5f,.004f,v),floatArrayOf(v,.004f,-5f),floatArrayOf(v,.004f,5f))
+            lines.forEach{p->grid[gi++]=p[0];grid[gi++]=p[1];grid[gi++]=p[2];grid[gi++]=.30f;grid[gi++]=.40f;grid[gi++]=.50f}
+        }
+        gridBuffer=ByteBuffer.allocateDirect(grid.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer();gridBuffer.put(grid);gridBuffer.position(0)
     }
     override fun onSurfaceChanged(gl:GL10?,w:Int,h:Int){viewportW=w;viewportH=h;GLES20.glViewport(0,0,w,h);Matrix.perspectiveM(projection,0,45f,w.toFloat()/h.coerceAtLeast(1),.1f,100f)}
     override fun onDrawFrame(gl:GL10?){
@@ -235,11 +242,20 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         GLES20.glUseProgram(program)
         drawCube(0f,-.12f,0f,7f,.12f,7f,floatArrayOf(.22f,.27f,.32f))
         val copy=synchronized(parts){parts.toList()}
-        copy.forEach{p->
+        copy.forEachIndexed{index,p->
             val color=when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"لوح"->floatArrayOf(.57f,.32f,.14f);else->floatArrayOf(.75f,.52f,.25f)}
+            if(index==selectedIndex){color[0]=(color[0]+.25f).coerceAtMost(1f);color[1]=(color[1]+.25f).coerceAtMost(1f)}
             drawCube(p.x,p.y,p.z,p.sx,p.sy,p.sz,color)
             if(p.nailed)drawCube(p.x,p.y+p.sy/2+.018f,p.z,.045f,.035f,.045f,floatArrayOf(.78f,.82f,.88f))
         }
+    }
+    private fun drawGrid(){
+        if(!gridVisible)return
+        Matrix.setIdentityM(model,0);Matrix.multiplyMM(mvp,0,view,0,model,0);Matrix.multiplyMM(finalM,0,projection,0,mvp,0)
+        GLES20.glUniformMatrix4fv(mvpHandle,1,false,finalM,0)
+        gridBuffer.position(0);GLES20.glEnableVertexAttribArray(posHandle);GLES20.glVertexAttribPointer(posHandle,3,GLES20.GL_FLOAT,false,24,gridBuffer)
+        gridBuffer.position(3);GLES20.glEnableVertexAttribArray(colorHandle);GLES20.glVertexAttribPointer(colorHandle,3,GLES20.GL_FLOAT,false,24,gridBuffer)
+        GLES20.glLineWidth(1f);GLES20.glDrawArrays(GLES20.GL_LINES,0,84)
     }
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,c:FloatArray){
         val hx=sx/2;val hy=sy/2;val hz=sz/2
