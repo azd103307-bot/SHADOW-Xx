@@ -100,6 +100,13 @@ class ConstructionActivity : Activity() {
         btn(sixth,"مشاركة التقرير"){shareReport()}
         btn(sixth,"حفظ صورة"){saveSceneImage()}
         controls.addView(sixth)
+        val colorRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(colorRow,"طبيعي"){scene.renderer.activeColor=0}
+        btn(colorRow,"رمادي"){scene.renderer.activeColor=1}
+        btn(colorRow,"أحمر"){scene.renderer.activeColor=2}
+        btn(colorRow,"أخضر"){scene.renderer.activeColor=3}
+        btn(colorRow,"تلوين المحددة"){scene.renderer.applyColor();info.text="تم تغيير لون القطعة المحددة"}
+        controls.addView(colorRow)
         val seventh=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(seventh,"تصدير ملف المشروع"){exportProjectFile()}
         btn(seventh,"استيراد ملف مشروع"){importProjectFile()}
@@ -373,7 +380,7 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
 private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile private var captureCallback:((Bitmap)->Unit)?=null
     fun captureWhenReady(callback:(Bitmap)->Unit){captureCallback=callback}
-    data class Part(val kind:String,val x:Float,val y:Float,val z:Float,val sx:Float,val sy:Float,val sz:Float,val nailed:Boolean)
+    data class Part(val kind:String,val x:Float,val y:Float,val z:Float,val sx:Float,val sy:Float,val sz:Float,val nailed:Boolean,val color:Int=0)
     private val parts=mutableListOf<Part>()
     @Volatile private var projectNotes=""
     fun setNotes(value:String){projectNotes=value}
@@ -390,6 +397,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile var nailing=false
     @Volatile var gridVisible=true
     @Volatile var snapEnabled=true
+    @Volatile var activeColor=0
     private var selectedIndex=-1
     private var viewportW=1
     private var viewportH=1
@@ -429,7 +437,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         drawCube(0f,-.12f,0f,7f,.12f,7f,floatArrayOf(.22f,.27f,.32f))
         val copy=synchronized(parts){parts.toList()}
         copy.forEachIndexed{index,p->
-            val color=when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"لوح"->floatArrayOf(.57f,.32f,.14f);else->floatArrayOf(.75f,.52f,.25f)}
+            val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"لوح"->floatArrayOf(.57f,.32f,.14f);else->floatArrayOf(.75f,.52f,.25f)}}
             if(index==selectedIndex){color[0]=(color[0]+.25f).coerceAtMost(1f);color[1]=(color[1]+.25f).coerceAtMost(1f)}
             drawCube(p.x,p.y,p.z,p.sx,p.sy,p.sz,color)
             if(p.nailed)drawCube(p.x,p.y+p.sy/2+.018f,p.z,.045f,.035f,.045f,floatArrayOf(.78f,.82f,.88f))
@@ -497,7 +505,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         synchronized(parts){
             remember()
             val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
-            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
+            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor));selectedIndex=parts.lastIndex
         }
     }
     fun addOnTop(kind:String){synchronized(parts){
@@ -505,12 +513,12 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         remember()
         val base=parts[selectedIndex]
         val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
-        parts.add(Part(kind,base.x,base.y+base.sy/2+dims.second/2,base.z,dims.first,dims.second,dims.third,nailing))
+        parts.add(Part(kind,base.x,base.y+base.sy/2+dims.second/2,base.z,dims.first,dims.second,dims.third,nailing,activeColor))
         selectedIndex=parts.lastIndex
     }}
     fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceAtLeast(p.sy/2))}}}
-    fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing));selectedIndex=parts.lastIndex}}
-    fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing))};selectedIndex=parts.lastIndex}}
+    fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing,activeColor));selectedIndex=parts.lastIndex}}
+    fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing,activeColor))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
         synchronized(parts){
             var best=-1;var bestDist=Float.MAX_VALUE
@@ -528,6 +536,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     }
     fun beginMove(){synchronized(parts){if(selectedIndex in parts.indices)remember()}}
     fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();val nx=p.x+rx;val nz=p.z+rz;parts[selectedIndex]=p.copy(x=if(snapEnabled)round(nx*10f)/10f else nx,z=if(snapEnabled)round(nz*10f)/10f else nz)}}}
+    fun applyColor(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts[selectedIndex]=parts[selectedIndex].copy(color=activeColor)}}}
     fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts.removeAt(selectedIndex)};selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
     fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
     fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
@@ -536,8 +545,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun duplicateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex;selectedIndex=parts.lastIndex}else if(parts.isNotEmpty()){remember();val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selectedIndex=parts.lastIndex}}}
     fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){remember();val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
-    fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).put("notes",projectNotes).toString()}}
-    fun importProject(data:String){try{val root=org.json.JSONObject(data);projectNotes=root.optString("notes","");val a=root.getJSONArray("parts");synchronized(parts){remember();parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))};selectedIndex=parts.lastIndex}}catch(_:Exception){}}
+    fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed).put("color",p.color))};return org.json.JSONObject().put("parts",a).put("notes",projectNotes).toString()}}
+    fun importProject(data:String){try{val root=org.json.JSONObject(data);projectNotes=root.optString("notes","");val a=root.getJSONArray("parts");synchronized(parts){remember();parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed"),o.optInt("color",0)))};selectedIndex=parts.lastIndex}}catch(_:Exception){}}
     fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب والقطع الأخرى: $wood\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(volume)}}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
     fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
