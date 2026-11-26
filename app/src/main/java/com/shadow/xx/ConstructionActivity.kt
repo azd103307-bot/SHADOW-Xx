@@ -729,8 +729,17 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun exportDxf():String=synchronized(parts){
         val out=StringBuilder()
         fun pair(code:Int,value:String){out.append(code).append("\r\n").append(value).append("\r\n")}
-        pair(0,"SECTION");pair(2,"HEADER");pair(9,"$"+"INSUNITS");pair(70,"6")
-        pair(0,"ENDSEC");pair(0,"SECTION");pair(2,"ENTITIES")
+        pair(0,"SECTION");pair(2,"HEADER")
+        pair(9,"\\$ACADVER");pair(1,"AC1015")
+        pair(9,"\\$INSUNITS");pair(70,"6")
+        pair(0,"ENDSEC")
+        pair(0,"SECTION");pair(2,"TABLES")
+        pair(0,"TABLE");pair(2,"LAYER");pair(70,"3")
+        pair(0,"LAYER");pair(2,"0");pair(70,"0");pair(62,"7");pair(6,"CONTINUOUS")
+        pair(0,"LAYER");pair(2,"PARTS");pair(70,"0");pair(62,"7");pair(6,"CONTINUOUS")
+        pair(0,"LAYER");pair(2,"LABELS");pair(70,"0");pair(62,"3");pair(6,"CONTINUOUS")
+        pair(0,"ENDTAB");pair(0,"ENDSEC")
+        pair(0,"SECTION");pair(2,"ENTITIES")
         parts.forEachIndexed{index,p->
             val x1=p.x-p.sx/2;val x2=p.x+p.sx/2
             val y1=p.z-p.sz/2;val y2=p.z+p.sz/2
