@@ -42,10 +42,16 @@ class OverlayService : Service() {
         fun add(label: String, action: () -> Unit) {
             box.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
-        add("⌂") {
-            val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(i)
+        add("رجوع") { MaysAccessibilityService.instance?.back() }
+        add("الرئيسية") {
+            val service = MaysAccessibilityService.instance
+            if (service != null) service.home() else {
+                val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(i)
+            }
         }
+        add("المفتوحة") { MaysAccessibilityService.instance?.recents() }
+        add("قفل") { MaysAccessibilityService.instance?.lock() }
         add("١") { launchSaved(1) }
         add("٢") { launchSaved(2) }
         add("×") { stopSelf() }
