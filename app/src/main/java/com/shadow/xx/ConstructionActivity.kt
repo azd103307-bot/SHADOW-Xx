@@ -120,6 +120,7 @@ class ConstructionActivity : Activity() {
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
+        scene.onSelect={val d=scene.renderer.selectedDimensions();if(d!=null)info.text="المحدد: طول %.2f م × ارتفاع %.2f م × عرض %.2f م".format(d[0],d[1],d[2])}
     }
     private fun deleteProject(){
         val prefs=getSharedPreferences("shadow_build_projects",MODE_PRIVATE)
@@ -353,12 +354,13 @@ class ConstructionActivity : Activity() {
 private class BuildSurface(activity:Activity):GLSurfaceView(activity){
     val renderer=BuildRenderer()
     var onTap:((Float,Float)->Unit)?=null
+    var onSelect:(()->Unit)?=null
     private var draggingPart=false
     private var lastX=0f;private var lastY=0f;private var lastDistance=0f;private var moved=false
     init{setEGLContextClientVersion(2);setRenderer(renderer);renderMode=RENDERMODE_CONTINUOUSLY}
     override fun onTouchEvent(e:MotionEvent):Boolean{
         when(e.actionMasked){
-            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);if(draggingPart)renderer.beginMove();return true}
+            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);if(draggingPart){renderer.beginMove();onSelect?.invoke()};return true}
             MotionEvent.ACTION_POINTER_DOWN->{lastDistance=distance(e);return true}
             MotionEvent.ACTION_MOVE->{
                 if(e.pointerCount>=2){
