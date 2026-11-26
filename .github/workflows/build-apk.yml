@@ -2,7 +2,7 @@ name: Build TEN PHONE MASTER APK
 on:
   workflow_dispatch:
   push:
-    branches: [ ten-phone-master ]
+    branches: [ main, ten-phone-master ]
     paths:
       - '**.kt'
       - '**.kts'
