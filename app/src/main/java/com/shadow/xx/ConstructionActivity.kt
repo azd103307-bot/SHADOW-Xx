@@ -58,7 +58,7 @@ class ConstructionActivity : Activity() {
         controls.addView(second)
         val buildRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(buildRow,"صف بلوك"){scene.renderer.addRow();info.text="تمت إضافة صف بلوكات"}
-        btn(buildRow,"جدار"){scene.renderer.addWall();info.text="تمت إضافة جدار من عدة طبقات"}
+        btn(buildRow,"جدار"){wallBuilderDialog();}
         btn(buildRow,"قالب صب"){selected="قالب";info.text="المس المشهد لإضافة قالب الصب"}
         btn(buildRow,"قطعة فوقها"){scene.renderer.addOnTop(selected);info.text="أضيفت قطعة فوق القطعة المحددة"}
         btn(buildRow,"مكتبة القطع"){openPartLibrary()}
@@ -161,6 +161,34 @@ class ConstructionActivity : Activity() {
                     info.text="تم حذف المشروع: $name"
                 }.show()
         }.setNegativeButton("إغلاق",null).show()
+    }
+    private fun wallBuilderDialog(){
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(22,8,22,0)}
+        fun field(label:String,value:String)=EditText(this).apply{hint=label;setText(value);inputType=8194}
+        val length=field("طول الجدار بالمتر","4")
+        val height=field("ارتفاع الجدار بالمتر","2.8")
+        val thickness=field("سماكة الجدار بالمتر","0.20")
+        val blockLength=field("طول البلوك بالمتر","0.40")
+        val blockHeight=field("ارتفاع البلوك بالمتر","0.20")
+        val joint=field("فاصل المونة بالمتر","0.01")
+        listOf(length,height,thickness,blockLength,blockHeight,joint).forEach{panel.addView(it)}
+        AlertDialog.Builder(this).setTitle("إنشاء جدار بمقاساتك").setView(ScrollView(this).apply{addView(panel)})
+            .setNegativeButton("إلغاء",null).setPositiveButton("إنشاء"){_,_->
+                val l=length.text.toString().toFloatOrNull()?:0f
+                val h=height.text.toString().toFloatOrNull()?:0f
+                val t=thickness.text.toString().toFloatOrNull()?:0f
+                val bl=blockLength.text.toString().toFloatOrNull()?:0f
+                val bh=blockHeight.text.toString().toFloatOrNull()?:0f
+                val j=joint.text.toString().toFloatOrNull()?:0f
+                if(!l.isFinite()||!h.isFinite()||!t.isFinite()||!bl.isFinite()||!bh.isFinite()||!j.isFinite()||
+                    l !in .1f..30f||h !in .1f..20f||t !in .05f..2f||bl !in .05f..2f||bh !in .05f..1f||j !in 0f..0.05f){
+                    Toast.makeText(this,"تحقق من الأبعاد المدخلة",Toast.LENGTH_LONG).show()
+                    return@setPositiveButton
+                }
+                val added=scene.renderer.addCustomWall(l,h,t,bl,bh,j)
+                if(added>0)info.text="تم إنشاء الجدار: $added بلوكة، بطول $l م وارتفاع $h م"
+                else info.text="الجدار كبير جداً أو تعذر إنشاؤه"
+            }.show()
     }
     private fun openPartLibrary(){
         val items=arrayOf("بلوك","طوب","لوح خشب","مربع خشب","دعامة","قالب","عمود خرسانة","كمرة خرسانة","بلاطة خرسانة")
@@ -672,6 +700,34 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         selectedIndex=parts.lastIndex
     }}
     fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceIn(p.sy/2,100f))}}}
+    fun addCustomWall(length:Float,height:Float,thickness:Float,blockLength:Float,blockHeight:Float,joint:Float):Int{
+        val moduleX=blockLength+joint
+        val moduleY=blockHeight+joint
+        val columns=kotlin.math.ceil(length/moduleX).toInt()+2
+        val rows=kotlin.math.ceil(height/moduleY).toInt()
+        if(columns<=0||rows<=0||columns.toLong()*rows.toLong()>3000L)return 0
+        synchronized(parts){
+            remember()
+            val before=parts.size
+            for(row in 0 until rows){
+                val offset=if(row%2==1)-moduleX/2f else 0f
+                for(column in 0 until columns){
+                    val center=-length/2f+blockLength/2f+offset+column*moduleX
+                    val left=maxOf(center-blockLength/2f,-length/2f)
+                    val right=minOf(center+blockLength/2f,length/2f)
+                    val bottom=row*moduleY
+                    val top=minOf(bottom+blockHeight,height)
+                    val actualWidth=right-left
+                    val actualHeight=top-bottom
+                    if(actualWidth>.02f&&actualHeight>.02f){
+                        parts.add(Part("بلوك",(left+right)/2f,bottom+actualHeight/2f,0f,actualWidth,actualHeight,thickness,nailing,activeColor))
+                    }
+                }
+            }
+            selectedIndex=parts.lastIndex
+            return parts.size-before
+        }
+    }
     fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing,activeColor));selectedIndex=parts.lastIndex}}
     fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing,activeColor))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
