@@ -91,7 +91,8 @@ class ConstructionActivity : Activity() {
         btn(sixth,"مشاركة التقرير"){shareReport()}
         btn(sixth,"حفظ صورة"){saveSceneImage()}
         controls.addView(sixth)
-        root.addView(controls);setContentView(root)
+        val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
+        root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
     }
     private fun saveNamedProject(){
