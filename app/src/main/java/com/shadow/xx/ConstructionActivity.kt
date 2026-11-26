@@ -707,13 +707,25 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         return try{
             val root=org.json.JSONObject(data)
             val array=root.getJSONArray("parts")
+            if(array.length()>10000)return false
             val loaded=mutableListOf<Part>()
+            val allowed=setOf("بلوك","طوب","لوح","مربع","دعامة","قالب","عمود","كمرة","بلاطة")
             for(i in 0 until array.length()){
                 val o=array.getJSONObject(i)
-                loaded.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed"),o.optInt("color",0)))
+                val x=o.optDouble("x",Double.NaN).toFloat()
+                val y=o.optDouble("y",Double.NaN).toFloat()
+                val z=o.optDouble("z",Double.NaN).toFloat()
+                val sx=o.optDouble("sx",Double.NaN).toFloat()
+                val sy=o.optDouble("sy",Double.NaN).toFloat()
+                val sz=o.optDouble("sz",Double.NaN).toFloat()
+                if(!x.isFinite()||!y.isFinite()||!z.isFinite()||x !in -1000f..1000f||y !in -1000f..1000f||z !in -1000f..1000f)throw IllegalArgumentException("invalid position")
+                if(!sx.isFinite()||!sy.isFinite()||!sz.isFinite()||sx !in .001f..100f||sy !in .001f..100f||sz !in .001f..100f)throw IllegalArgumentException("invalid dimensions")
+                val kind=o.optString("kind","بلوك")
+                loaded.add(Part(if(kind in allowed)kind else "بلوك",x,y,z,sx,sy,sz,o.optBoolean("nailed"),o.optInt("color",0).coerceIn(0,3)))
             }
+            val notes=root.optString("notes","").take(20000)
             synchronized(parts){remember();parts.clear();parts.addAll(loaded);selectedIndex=parts.lastIndex}
-            projectNotes=root.optString("notes","")
+            projectNotes=notes
             true
         }catch(_:Exception){false}
     }
