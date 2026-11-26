@@ -49,6 +49,12 @@ class ConstructionActivity : Activity() {
         btn(buildRow,"جدار"){scene.renderer.addWall();info.text="تمت إضافة جدار من عدة طبقات"}
         btn(buildRow,"قالب صب"){selected="قالب";info.text="المس المشهد لإضافة قالب الصب"}
         controls.addView(buildRow)
+        val cameraRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(cameraRow,"منظور"){scene.renderer.setView("perspective")}
+        btn(cameraRow,"أعلى"){scene.renderer.setView("top")}
+        btn(cameraRow,"أمام"){scene.renderer.setView("front")}
+        btn(cameraRow,"جانب"){scene.renderer.setView("side")}
+        controls.addView(cameraRow)
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
         val third=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -197,6 +203,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile var cameraDistance=9f
     @Volatile var woodLength=3f
     @Volatile var nailing=false
+    @Volatile var gridVisible=true
     private var selectedIndex=-1
     private var viewportW=1
     private var viewportH=1
@@ -255,7 +262,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         buffer.position(3);GLES20.glEnableVertexAttribArray(colorHandle);GLES20.glVertexAttribPointer(colorHandle,3,GLES20.GL_FLOAT,false,24,buffer)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,36)
     }
-    fun rotate(dx:Float,dy:Float){angleY+=dx;angleX=(angleX+dy).coerceIn(-55f,65f)}
+    fun setView(view:String){when(view){"top"->{angleX=82f;angleY=0f;cameraDistance=10f};"front"->{angleX=0f;angleY=0f;cameraDistance=9f};"side"->{angleX=0f;angleY=90f;cameraDistance=9f};else->{angleX=22f;angleY=35f;cameraDistance=9f}}}
+    fun rotate(dx:Float,dy:Float){angleY+=dx;angleX=(angleX+dy).coerceIn(-55f,85f)}
     fun zoom(delta:Float){cameraDistance=(cameraDistance+delta).coerceIn(4.5f,18f)}
     fun add(kind:String){synchronized(parts){
         val n=parts.size
