@@ -730,8 +730,8 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val out=StringBuilder()
         fun pair(code:Int,value:String){out.append(code).append("\r\n").append(value).append("\r\n")}
         pair(0,"SECTION");pair(2,"HEADER")
-        pair(9,"\\$ACADVER");pair(1,"AC1015")
-        pair(9,"\\$INSUNITS");pair(70,"6")
+        pair(9,"\$ACADVER");pair(1,"AC1015")
+        pair(9,"\$INSUNITS");pair(70,"6")
         pair(0,"ENDSEC")
         pair(0,"SECTION");pair(2,"TABLES")
         pair(0,"TABLE");pair(2,"LAYER");pair(70,"3")
