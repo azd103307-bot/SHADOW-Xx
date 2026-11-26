@@ -33,6 +33,10 @@ class MainActivity : Activity() {
             setOnClickListener { chooseApp(2) }
         })
         root.addView(Button(this).apply {
+            text = "تفعيل أزرار الرجوع والقفل"
+            setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        })
+        root.addView(Button(this).apply {
             text = "تفعيل الشريط العائم"
             setOnClickListener {
                 if (!Settings.canDrawOverlays(this@MainActivity)) {
