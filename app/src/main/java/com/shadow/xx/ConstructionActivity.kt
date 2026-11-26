@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PointF
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -29,6 +30,7 @@ class ConstructionActivity : Activity() {
     private lateinit var info: TextView
     private var selected = "بلوك"
     private var fixed = false
+    private var measureCaptureUri:Uri?=null
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,7 +100,8 @@ class ConstructionActivity : Activity() {
         val seventh=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(seventh,"تصدير ملف المشروع"){exportProjectFile()}
         btn(seventh,"استيراد ملف مشروع"){importProjectFile()}
-        btn(seventh,"قياس من صورة"){chooseMeasurePhoto()}
+        btn(seventh,"اختيار صورة"){chooseMeasurePhoto()}
+        btn(seventh,"التقاط بالكاميرا"){captureMeasurePhoto()}
         btn(seventh,"حذف مشروع"){deleteProject()}
         controls.addView(seventh)
         val eighth=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -133,6 +136,24 @@ class ConstructionActivity : Activity() {
                 scene.renderer.setNotes(editor.text.toString())
                 info.text="تم حفظ شرح المشروع ضمن ملفه"
             }.show()
+    }
+    private fun captureMeasurePhoto(){
+        try{
+            val values=ContentValues().apply{
+                put(MediaStore.Images.Media.DISPLAY_NAME,"SHADOW_MEASURE_${System.currentTimeMillis()}.jpg")
+                put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg")
+                if(Build.VERSION.SDK_INT>=29)put(MediaStore.Images.Media.RELATIVE_PATH,Environment.DIRECTORY_PICTURES+"/SHADOW BUILD")
+            }
+            val uri=contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)
+                ?:throw IllegalStateException("تعذر تجهيز مكان للصورة")
+            measureCaptureUri=uri
+            val intent=Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply{
+                putExtra(MediaStore.EXTRA_OUTPUT,uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            if(intent.resolveActivity(packageManager)!=null)startActivityForResult(intent,4104)
+            else{contentResolver.delete(uri,null,null);measureCaptureUri=null;Toast.makeText(this,"لا يوجد تطبيق كاميرا متاح",Toast.LENGTH_LONG).show()}
+        }catch(e:Exception){Toast.makeText(this,"تعذر تشغيل الكاميرا: ${e.message}",Toast.LENGTH_LONG).show()}
     }
     private fun chooseMeasurePhoto(){
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="image/*"}
@@ -212,6 +233,10 @@ class ConstructionActivity : Activity() {
             }else if(requestCode==4103){
                 val photo=decodeMeasurePhoto(data.data!!)
                 showPhotoMeasure(photo)
+            }else if(requestCode==4104){
+                val uri=measureCaptureUri?:throw IllegalStateException("لم يتم حفظ الصورة")
+                showPhotoMeasure(decodeMeasurePhoto(uri))
+                measureCaptureUri=null
             }
         }catch(e:Exception){Toast.makeText(this,"تعذر تنفيذ العملية: ${e.message}",Toast.LENGTH_LONG).show()}
     }
