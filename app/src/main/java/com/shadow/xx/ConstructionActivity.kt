@@ -121,6 +121,10 @@ class ConstructionActivity : Activity() {
         btn(eighth,"شرح وخطوات المشروع"){editProjectNotes()}
         btn(eighth,"عرض الشرح"){showProjectNotes()}
         controls.addView(eighth)
+        val ninth=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(ninth,"تصدير مخطط DXF"){exportDxfFile()}
+        btn(ninth,"حفظ صورة PNG"){saveSceneImage()}
+        controls.addView(ninth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,panelHeight));setContentView(root)
@@ -240,6 +244,13 @@ class ConstructionActivity : Activity() {
         AlertDialog.Builder(this).setTitle("القياس اليدوي من صورة").setView(ScrollView(this).apply{addView(panel)})
             .setPositiveButton("إغلاق",null).show()
     }
+    private fun exportDxfFile(){
+        val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
+            addCategory(Intent.CATEGORY_OPENABLE);type="application/dxf"
+            putExtra(Intent.EXTRA_TITLE,"SHADOW_BUILD_plan.dxf")
+        }
+        startActivityForResult(intent,4105)
+    }
     private fun exportProjectFile(){
         val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
             addCategory(Intent.CATEGORY_OPENABLE);type="application/json"
@@ -268,7 +279,12 @@ class ConstructionActivity : Activity() {
                 return
             }
             val uri=data?.data?:return
-            if(requestCode==4101){
+            if(requestCode==4105){
+                val dxf=scene.renderer.exportDxf()
+                val output=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر إنشاء ملف DXF")
+                output.use{it.write(dxf.toByteArray(Charsets.UTF_8))}
+                Toast.makeText(this,"تم تصدير المخطط DXF",Toast.LENGTH_LONG).show()
+            }else if(requestCode==4101){
                 val json=scene.renderer.exportProject()
                 val output=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر إنشاء الملف")
                 output.use{it.write(json.toByteArray(Charsets.UTF_8))}
@@ -646,6 +662,27 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val blockCost=blocks*p[0];val brickCost=bricks*p[1];val timberCost=timber*p[2];val concreteCost=concrete*p[3]
         val total=blockCost+brickCost+timberCost+concreteCost
         "البلوك: $blocks × %.2f = %.2f\\nالطوب: $bricks × %.2f = %.2f\\nالخشب: %.2f م × %.2f = %.2f\\nالخرسانة: %.3f م³ × %.2f = %.2f\\n\\nإجمالي التكلفة التقديري: %.2f".format(p[0],blockCost,p[1],brickCost,timber,p[2],timberCost,concrete,p[3],concreteCost,total)
+    }
+    fun exportDxf():String=synchronized(parts){
+        val out=StringBuilder()
+        fun pair(code:Int,value:String){out.append(code).append("\r\n").append(value).append("\r\n")}
+        pair(0,"SECTION");pair(2,"HEADER");pair(9,"$"+"$INSUNITS");pair(70,"6")
+        pair(0,"ENDSEC");pair(0,"SECTION");pair(2,"ENTITIES")
+        parts.forEachIndexed{index,p->
+            val x1=p.x-p.sx/2;val x2=p.x+p.sx/2
+            val y1=p.z-p.sz/2;val y2=p.z+p.sz/2
+            val corners=listOf(x1 to y1,x2 to y1,x2 to y2,x1 to y2)
+            for(i in 0..3){
+                val a=corners[i];val b=corners[(i+1)%4]
+                pair(0,"LINE");pair(8,"PARTS")
+                pair(10,a.first.toString());pair(20,a.second.toString());pair(30,"0")
+                pair(11,b.first.toString());pair(21,b.second.toString());pair(31,"0")
+            }
+            pair(0,"TEXT");pair(8,"LABELS");pair(10,p.x.toString());pair(20,p.z.toString());pair(30,"0")
+            pair(40,"0.12");pair(1,"${p.kind} #${index+1}");pair(50,"0")
+        }
+        pair(0,"ENDSEC");pair(0,"EOF")
+        out.toString()
     }
     fun report():String{synchronized(parts){
         val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
