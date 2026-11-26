@@ -91,7 +91,7 @@ class ConstructionActivity : Activity() {
         controls.addView(dimensionRow)
         val fifth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(fifth,"حفظ المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("project",scene.renderer.exportProject()).apply();info.text="تم حفظ المشروع على الجهاز"}
-        btn(fifth,"فتح المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).getString("project",null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع"}?:run{info.text="لا يوجد مشروع محفوظ"}}
+        btn(fifth,"فتح المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).getString("project",null)?.let{if(scene.renderer.importProject(it))info.text="تم فتح المشروع" else info.text="ملف المشروع غير صالح"}?:run{info.text="لا يوجد مشروع محفوظ"}}
         btn(fifth,"التمتير"){measurementDialog()}
         btn(fifth,"تقرير ونسخ"){val t=scene.renderer.report();(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("تقرير البناء",t));info.text="تم نسخ تقرير الكميات"}
         controls.addView(fifth)
@@ -253,12 +253,13 @@ class ConstructionActivity : Activity() {
             val uri=data?.data?:return
             if(requestCode==4101){
                 val json=scene.renderer.exportProject()
-                contentResolver.openOutputStream(uri)?.use{it.write(json.toByteArray(Charsets.UTF_8))}
+                val output=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر إنشاء الملف")
+                output.use{it.write(json.toByteArray(Charsets.UTF_8))}
                 Toast.makeText(this,"تم تصدير ملف المشروع",Toast.LENGTH_LONG).show()
             }else if(requestCode==4102){
                 val json=contentResolver.openInputStream(uri)?.bufferedReader()?.use{it.readText()}
                     ?:throw IllegalStateException("تعذر قراءة الملف")
-                scene.renderer.importProject(json)
+                if(!scene.renderer.importProject(json))throw IllegalArgumentException("ملف المشروع غير صالح")
                 Toast.makeText(this,"تم استيراد ملف المشروع",Toast.LENGTH_LONG).show()
             }else if(requestCode==4103){
                 showPhotoMeasure(decodeMeasurePhoto(uri))
@@ -282,7 +283,7 @@ class ConstructionActivity : Activity() {
         if(names.isEmpty()){Toast.makeText(this,"لا توجد مشاريع محفوظة بعد",Toast.LENGTH_SHORT).show();return}
         AlertDialog.Builder(this).setTitle("اختر مشروعاً لفتحه").setItems(names.toTypedArray()){_,which->
             val name=names[which]
-            prefs.getString("project_"+name,null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع: $name"}
+            prefs.getString("project_"+name,null)?.let{if(scene.renderer.importProject(it))info.text="تم فتح المشروع: $name" else info.text="ملف المشروع غير صالح"}
         }.setNegativeButton("إغلاق",null).show()
     }
     private fun saveSceneImage(){
@@ -575,7 +576,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){remember();val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
     fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed).put("color",p.color))};return org.json.JSONObject().put("parts",a).put("notes",projectNotes).toString()}}
-    fun importProject(data:String){try{val root=org.json.JSONObject(data);projectNotes=root.optString("notes","");val a=root.getJSONArray("parts");synchronized(parts){remember();parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed"),o.optInt("color",0)))};selectedIndex=parts.lastIndex}}catch(_:Exception){}}
+    fun importProject(data:String):Boolean{return try{val root=org.json.JSONObject(data);val a=root.getJSONArray("parts");synchronized(parts){remember();parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed"),o.optInt("color",0)))};selectedIndex=parts.lastIndex};projectNotes=root.optString("notes","");true}catch(_:Exception){false}}
     fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب والقطع الأخرى: $wood\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(volume)}}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
     fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
