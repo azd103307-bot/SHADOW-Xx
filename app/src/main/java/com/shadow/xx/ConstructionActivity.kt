@@ -119,6 +119,7 @@ class ConstructionActivity : Activity() {
         controls.addView(seventh)
         val eighth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(eighth,"شرح وخطوات المشروع"){editProjectNotes()}
+        btn(eighth,"عرض الشرح"){showProjectNotes()}
         controls.addView(eighth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
@@ -147,6 +148,13 @@ class ConstructionActivity : Activity() {
             selected=when(which){2->"لوح";3->"مربع";4->"دعامة";5->"قالب";6->"عمود";7->"كمرة";8->"بلاطة";else->items[which]}
             info.text="القطعة المختارة: ${items[which]} — المس المشهد لوضعها"
         }.show()
+    }
+    private fun showProjectNotes(){
+        val notes=scene.renderer.getNotes()
+        if(notes.isBlank()){Toast.makeText(this,"لم تكتب شرحاً للمشروع بعد",Toast.LENGTH_SHORT).show();return}
+        val view=TextView(this).apply{text=notes;textSize=16f;setPadding(24,16,24,16);textDirection=android.view.View.TEXT_DIRECTION_LOCALE}
+        AlertDialog.Builder(this).setTitle("شرح المشروع وخطواته").setView(ScrollView(this).apply{addView(view)})
+            .setPositiveButton("إغلاق",null).show()
     }
     private fun editProjectNotes(){
         val editor=EditText(this).apply{
