@@ -16,6 +16,7 @@ class ShadowAccessibilityService : AccessibilityService() {
     private var panel: View? = null
     private var params: WindowManager.LayoutParams? = null
     private var expanded = true
+    private var controlsRow: View? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -37,9 +38,15 @@ class ShadowAccessibilityService : AccessibilityService() {
             text = "SHADOW  ⋮"; textSize = 12f; gravity = Gravity.CENTER
             setTextColor(Color.WHITE); setPadding(4, 6, 4, 6)
             setOnTouchListener(DragTouch())
+            setOnClickListener {
+                expanded = !expanded
+                controlsRow?.visibility = if (expanded) View.VISIBLE else View.GONE
+                text = if (expanded) "SHADOW  ⋮" else "SHADOW  +"
+            }
         }
         bar.addView(grip)
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        controlsRow = row
         fun add(label: String, click: () -> Unit) {
             val b = TextView(this).apply {
                 text = label; textSize = 12f; gravity = Gravity.CENTER
@@ -58,7 +65,7 @@ class ShadowAccessibilityService : AccessibilityService() {
         add("نص") { extractVisibleText() }
         add("١") { launchSaved(1) }
         add("٢") { launchSaved(2) }
-        add("×") { hidePanel() }
+        add("−") { expanded = false; row.visibility = View.GONE; grip.text = "SHADOW  +" }
         bar.addView(row)
         panel = bar
         val type = if (Build.VERSION.SDK_INT >= 22) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
