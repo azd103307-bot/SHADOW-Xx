@@ -165,7 +165,7 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
     init{setEGLContextClientVersion(2);setRenderer(renderer);renderMode=RENDERMODE_CONTINUOUSLY}
     override fun onTouchEvent(e:MotionEvent):Boolean{
         when(e.actionMasked){
-            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);return true}
+            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);if(draggingPart)renderer.beginMove();return true}
             MotionEvent.ACTION_POINTER_DOWN->{lastDistance=distance(e);return true}
             MotionEvent.ACTION_MOVE->{
                 if(e.pointerCount>=2){
@@ -293,7 +293,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             selectedIndex=best;return best>=0
         }
     }
-    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();parts[selectedIndex]=p.copy(x=p.x+rx,z=p.z+rz)}}}
+    fun beginMove(){synchronized(parts){if(selectedIndex in parts.indices)remember()}}\n    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();parts[selectedIndex]=p.copy(x=p.x+rx,z=p.z+rz)}}}
     fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts.removeAt(selectedIndex)};selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
     fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
     fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
