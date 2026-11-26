@@ -3,6 +3,7 @@ package com.shadow.xx
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PointF
@@ -120,7 +121,8 @@ class ConstructionActivity : Activity() {
         btn(eighth,"شرح وخطوات المشروع"){editProjectNotes()}
         controls.addView(eighth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
-        root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
+        val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
+        root.addView(controlsScroll,LinearLayout.LayoutParams(-1,panelHeight));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
         scene.onSelect={val d=scene.renderer.selectedDimensions();if(d!=null)info.text="المحدد: طول %.2f م × ارتفاع %.2f م × عرض %.2f م".format(d[0],d[1],d[2])}
         restoreAutosave()
