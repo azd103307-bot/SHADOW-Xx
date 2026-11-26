@@ -4,61 +4,54 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
 import android.content.Intent
-import android.provider.Settings
 import android.view.Gravity
 import android.widget.*
 import android.graphics.Typeface
 
 class MainActivity : Activity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(22), dp(28), dp(22), dp(22))
+            gravity = Gravity.CENTER
+            setPadding(dp(24), dp(28), dp(24), dp(24))
             setBackgroundColor(0xFF101827.toInt())
         }
-        val title = TextView(this).apply {
-            text = "SHADOW BUILD"; textSize = 30f
-            setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(8))
-        }
-        val sub = TextView(this).apply {
-            text = "مساحة عمل عربية حرة للبناء والتشييد والتصميم ثلاثي الأبعاد"
-            textSize = 16f; setTextColor(0xFFCBD5E1.toInt()); gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(24))
-        }
-        root.addView(title); root.addView(sub)
-        root.addView(button("ابدأ البناء والتصميم ثلاثي الأبعاد") { startActivity(Intent(this, ConstructionActivity::class.java)) }, lp())
-        root.addView(button("تفعيل الشريط العائم") {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            Toast.makeText(this, "فعّل خدمة SHADOW Xx من خدمات إمكانية الوصول", Toast.LENGTH_LONG).show()
-        }, lp())
-        root.addView(button("اختيار التطبيق الأول") { chooseApp(1) }, lp())
-        root.addView(button("اختيار التطبيق الثاني") { chooseApp(2) }, lp())
-        val hint = TextView(this).apply {
-            text = "ابدأ من ورشة البناء: أضف البلوكات والخشب بنفسك، كوّن الجدران، قِس الكميات، واحفظ مشاريعك. أدوات الشريط العائم واختيار التطبيقات تبقى ميزات مساعدة منفصلة."
-            textSize = 15f; setTextColor(0xFFE2E8F0.toInt()); setPadding(0, dp(20), 0, 0)
-        }
-        root.addView(hint)
-        setContentView(root)
-    }
-    private fun lp() = LinearLayout.LayoutParams(-1, dp(62)).apply { bottomMargin = dp(14) }
-    private fun button(label: String, action: () -> Unit) = Button(this).apply {
-        text = label; isAllCaps = false; textSize = 17f; minHeight = dp(58)
-        setOnClickListener { action() }
-    }
-    private fun chooseApp(slot: Int) {
-        val pm = packageManager
-        val apps = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
-            .sortedBy { it.loadLabel(pm).toString().lowercase() }
-        if (apps.isEmpty()) { Toast.makeText(this, "لم يتم العثور على تطبيقات قابلة للتشغيل", Toast.LENGTH_SHORT).show(); return }
-        val labels = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
-        AlertDialog.Builder(this).setTitle(if (slot == 1) "اختر التطبيق الأول" else "اختر التطبيق الثاني")
-            .setItems(labels) { _, which ->
-                getSharedPreferences("shadow", MODE_PRIVATE).edit().putString("app$slot", apps[which].activityInfo.packageName).apply()
-                Toast.makeText(this, "تم حفظ التطبيق", Toast.LENGTH_SHORT).show()
-            }.setNegativeButton("إلغاء", null).show()
+        root.addView(TextView(this).apply {
+            text = "SHADOW BUILD"
+            textSize = 32f
+            setTextColor(0xFFFFFFFF.toInt())
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(10))
+        })
+        root.addView(TextView(this).apply {
+            text = "ورشة عربية حرة للبناء والتشييد والتصميم ثلاثي الأبعاد"
+            textSize = 17f
+            setTextColor(0xFFCBD5E1.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(28))
+        })
+        root.addView(Button(this).apply {
+            text = "ابدأ البناء والتصميم"
+            isAllCaps = false
+            textSize = 19f
+            minHeight = dp(64)
+            setOnClickListener { startActivity(Intent(this@MainActivity, ConstructionActivity::class.java)) }
+        }, LinearLayout.LayoutParams(-1, dp(68)))
+        root.addView(Button(this).apply {
+            text = "عن ورشة البناء"
+            isAllCaps = false
+            textSize = 16f
+            setOnClickListener {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("SHADOW BUILD")
+                    .setMessage("أنت المصمم والمسؤول عن العمل. أضف قطع البناء والخشب والخرسانة بنفسك، قِس الكميات، واكتب شرح مشروعك واحفظه أو صدّره.")
+                    .setPositiveButton("حسناً", null)
+                    .show()
+            }
+        }, LinearLayout.LayoutParams(-1, dp(58)).apply { topMargin = dp(12) })
     }
 }
