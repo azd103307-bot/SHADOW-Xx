@@ -53,5 +53,6 @@ class MainActivity : Activity() {
                     .show()
             }
         }, LinearLayout.LayoutParams(-1, dp(58)).apply { topMargin = dp(12) })
+        setContentView(root)
     }
 }
