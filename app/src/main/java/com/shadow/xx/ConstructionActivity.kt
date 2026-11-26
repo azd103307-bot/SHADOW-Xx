@@ -581,7 +581,15 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
     fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed).put("color",p.color))};return org.json.JSONObject().put("parts",a).put("notes",projectNotes).toString()}}
     fun importProject(data:String):Boolean{return try{val root=org.json.JSONObject(data);val a=root.getJSONArray("parts");synchronized(parts){remember();parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed"),o.optInt("color",0)))};selectedIndex=parts.lastIndex};projectNotes=root.optString("notes","");true}catch(_:Exception){false}}
-    fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب والقطع الأخرى: $wood\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(volume)}}
+    fun report():String{synchronized(parts){
+        val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
+        val boards=parts.count{it.kind=="لوح"};val squares=parts.count{it.kind=="مربع"}
+        val supports=parts.count{it.kind=="دعامة"};val molds=parts.count{it.kind=="قالب"}
+        val columns=parts.count{it.kind=="عمود"};val beams=parts.count{it.kind=="كمرة"};val slabs=parts.count{it.kind=="بلاطة"}
+        val woodLength=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{it.sx.toDouble()}
+        val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()}
+        return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوك: $blocks\\nالطوب: $bricks\\nألواح الخشب: $boards\\nمربعات الخشب: $squares\\nالدعامات: $supports\\nقوالب الصب: $molds\\nالأعمدة الخرسانية: $columns\\nالكمرات: $beams\\nالبلاطات: $slabs\\nإجمالي أطوال قطع الخشب: %.2f م\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(woodLength,volume)
+    }}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
     fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
     private fun shader(type:Int,src:String):Int{val s=GLES20.glCreateShader(type);GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);return s}
