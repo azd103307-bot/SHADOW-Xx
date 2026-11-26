@@ -123,6 +123,7 @@ class ConstructionActivity : Activity() {
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
         scene.onSelect={val d=scene.renderer.selectedDimensions();if(d!=null)info.text="المحدد: طول %.2f م × ارتفاع %.2f م × عرض %.2f م".format(d[0],d[1],d[2])}
+        restoreAutosave()
     }
     private fun deleteProject(){
         val prefs=getSharedPreferences("shadow_build_projects",MODE_PRIVATE)
@@ -267,6 +268,13 @@ class ConstructionActivity : Activity() {
             }
         }catch(e:Exception){Toast.makeText(this,"تعذر تنفيذ العملية: ${e.message}",Toast.LENGTH_LONG).show()}
     }
+    private fun restoreAutosave(){
+        val saved=getSharedPreferences("shadow_build",MODE_PRIVATE).getString("autosave",null)?:return
+        try{
+            val count=org.json.JSONObject(saved).getJSONArray("parts").length()
+            if(count>0&&scene.renderer.importProject(saved))info.text="تمت استعادة آخر مشروع تلقائياً"
+        }catch(_:Exception){}
+    }
     private fun saveNamedProject(){
         val input=EditText(this).apply{hint="اسم المشروع"}
         AlertDialog.Builder(this).setTitle("حفظ مشروع جديد").setView(input).setNegativeButton("إلغاء",null).setPositiveButton("حفظ"){_,_->
@@ -389,7 +397,7 @@ class ConstructionActivity : Activity() {
             }.show()
     }
     override fun onResume(){super.onResume();if(::scene.isInitialized)scene.onResume()}
-    override fun onPause(){if(::scene.isInitialized)scene.onPause();super.onPause()}
+    override fun onPause(){if(::scene.isInitialized){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("autosave",scene.renderer.exportProject()).apply();scene.onPause()};super.onPause()}
 }
 
 private class BuildSurface(activity:Activity):GLSurfaceView(activity){
