@@ -35,6 +35,7 @@ class ConstructionActivity : Activity() {
         btn(first,"بلوك"){selected="بلوك";info.text="بلوك: المس أرضية المشهد لإضافته"}
         btn(first,"لوح خشب"){selected="لوح";info.text="لوح: عرض 10 سم، طول 3 أمتار"}
         btn(first,"مربع خشب"){selected="مربع";info.text="مربع: 7 × 7 سم"}
+        btn(first,"دعامة"){selected="دعامة";info.text="دعامة خشبية رأسية"}
         btn(first,"تثبيت / تسمير"){fixed=!fixed;scene.renderer.nailing=fixed;info.text=if(fixed)"التسمير مفعّل للقطع الجديدة" else "التسمير متوقف"}
         controls.addView(first)
         val second=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -43,6 +44,11 @@ class ConstructionActivity : Activity() {
         btn(second,"1 م"){scene.renderer.woodLength=1f;info.text="طول الخشب: متر واحد"}
         btn(second,"75 سم"){scene.renderer.woodLength=.75f;info.text="طول الخشب: 75 سم"}
         controls.addView(second)
+        val buildRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(buildRow,"صف بلوك"){scene.renderer.addRow();info.text="تمت إضافة صف بلوكات"}
+        btn(buildRow,"جدار"){scene.renderer.addWall();info.text="تمت إضافة جدار من عدة طبقات"}
+        btn(buildRow,"قالب صب"){selected="قالب";info.text="المس المشهد لإضافة قالب الصب"}
+        controls.addView(buildRow)
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
         val third=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -54,7 +60,8 @@ class ConstructionActivity : Activity() {
         btn(fourth,"تحديد آخر قطعة"){scene.renderer.selectLast();info.text="تم تحديد آخر قطعة"}
         btn(fourth,"نسخ قطعة"){scene.renderer.duplicateLast();info.text="تم نسخ القطعة"}
         btn(fourth,"تدوير 90°"){scene.renderer.rotateLast();info.text="تم تدوير القطعة"}
-        btn(fourth,"حذف المحددة"){scene.renderer.deleteLast();info.text="تم حذف القطعة"}
+        btn(fourth,"حذف المحددة"){scene.renderer.deleteSelected();info.text="تم حذف القطعة المحددة"}
+        btn(fourth,"الأبعاد"){editSelectedDimensions()}
         controls.addView(fourth)
         val fifth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(fifth,"حفظ المشروع"){getSharedPreferences("shadow_build",MODE_PRIVATE).edit().putString("project",scene.renderer.exportProject()).apply();info.text="تم حفظ المشروع على الجهاز"}
@@ -68,7 +75,7 @@ class ConstructionActivity : Activity() {
         btn(sixth,"مشاركة التقرير"){shareReport()}
         controls.addView(sixth)
         root.addView(controls);setContentView(root)
-        scene.onTap={scene.renderer.add(selected)}
+        scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
     }
     private fun saveNamedProject(){
         val input=EditText(this).apply{hint="اسم المشروع"}
@@ -95,6 +102,18 @@ class ConstructionActivity : Activity() {
         val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"تقرير مشروع البناء");putExtra(Intent.EXTRA_TEXT,report)}
         startActivity(Intent.createChooser(send,"مشاركة تقرير البناء"))
     }
+    private fun editSelectedDimensions(){
+        val current=scene.renderer.selectedDimensions()?:run{info.text="حدد قطعة أولاً";return}
+        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,8,24,0)}
+        val a=EditText(this).apply{hint="الطول بالمتر";setText(current[0].toString());inputType=8194}
+        val b=EditText(this).apply{hint="الارتفاع بالمتر";setText(current[1].toString());inputType=8194}
+        val d=EditText(this).apply{hint="العرض بالمتر";setText(current[2].toString());inputType=8194}
+        listOf(a,b,d).forEach{box.addView(it)}
+        AlertDialog.Builder(this).setTitle("تعديل أبعاد القطعة").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("تطبيق"){_,_->
+            val x=a.text.toString().toFloatOrNull();val y=b.text.toString().toFloatOrNull();val z=d.text.toString().toFloatOrNull()
+            if(x!=null&&y!=null&&z!=null&&x>0&&y>0&&z>0)scene.renderer.setSelectedDimensions(x,y,z) else info.text="أدخل أبعاداً صحيحة أكبر من صفر"
+        }.show()
+    }
     private fun measurementDialog(){
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,8,24,0)}
         val length=EditText(this).apply{hint="الطول بالمتر";inputType=8194}
@@ -115,12 +134,13 @@ class ConstructionActivity : Activity() {
 
 private class BuildSurface(activity:Activity):GLSurfaceView(activity){
     val renderer=BuildRenderer()
-    var onTap:(()->Unit)?=null
+    var onTap:((Float,Float)->Unit)?=null
+    private var draggingPart=false
     private var lastX=0f;private var lastY=0f;private var lastDistance=0f;private var moved=false
     init{setEGLContextClientVersion(2);setRenderer(renderer);renderMode=RENDERMODE_CONTINUOUSLY}
     override fun onTouchEvent(e:MotionEvent):Boolean{
         when(e.actionMasked){
-            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;return true}
+            MotionEvent.ACTION_DOWN->{lastX=e.x;lastY=e.y;moved=false;draggingPart=renderer.pick(e.x,e.y,width,height);return true}
             MotionEvent.ACTION_POINTER_DOWN->{lastDistance=distance(e);return true}
             MotionEvent.ACTION_MOVE->{
                 if(e.pointerCount>=2){
@@ -128,11 +148,11 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
                 }else{
                     val dx=e.x-lastX;val dy=e.y-lastY
                     if(abs(dx)+abs(dy)>3)moved=true
-                    renderer.rotate(dx*.45f,dy*.35f);lastX=e.x;lastY=e.y
+                    if(draggingPart)renderer.moveSelected(dx,dy,width,height) else renderer.rotate(dx*.45f,dy*.35f);lastX=e.x;lastY=e.y
                 };return true
             }
             MotionEvent.ACTION_POINTER_UP->{lastDistance=0f;return true}
-            MotionEvent.ACTION_UP->{if(!moved)onTap?.invoke();performClick();return true}
+            MotionEvent.ACTION_UP->{if(!moved&&!draggingPart)onTap?.invoke(e.x,e.y);draggingPart=false;performClick();return true}
         };return true
     }
     private fun distance(e:MotionEvent):Float{if(e.pointerCount<2)return 0f;val dx=e.getX(0)-e.getX(1);val dy=e.getY(0)-e.getY(1);return hypot(dx,dy)}
@@ -147,6 +167,9 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile var cameraDistance=9f
     @Volatile var woodLength=3f
     @Volatile var nailing=false
+    private var selectedIndex=-1
+    private var viewportW=1
+    private var viewportH=1
     private var program=0
     private var posHandle=0
     private var colorHandle=0
@@ -167,7 +190,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         posHandle=GLES20.glGetAttribLocation(program,"aPosition");colorHandle=GLES20.glGetAttribLocation(program,"aColor");mvpHandle=GLES20.glGetUniformLocation(program,"uMVP")
         buffer=ByteBuffer.allocateDirect(verts.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
     }
-    override fun onSurfaceChanged(gl:GL10?,w:Int,h:Int){GLES20.glViewport(0,0,w,h);Matrix.perspectiveM(projection,0,45f,w.toFloat()/h.coerceAtLeast(1),.1f,100f)}
+    override fun onSurfaceChanged(gl:GL10?,w:Int,h:Int){viewportW=w;viewportH=h;GLES20.glViewport(0,0,w,h);Matrix.perspectiveM(projection,0,45f,w.toFloat()/h.coerceAtLeast(1),.1f,100f)}
     override fun onDrawFrame(gl:GL10?){
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         Matrix.setLookAtM(view,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
@@ -215,15 +238,44 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         }
         parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing))
     }}
-    fun selectLast(){synchronized(parts){selected=parts.lastIndex}}
+    fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
+        val x=((sx/w.coerceAtLeast(1).toFloat())-.5f)*6f
+        val z=((.5f-(sy/h.coerceAtLeast(1).toFloat()))*6f)
+        synchronized(parts){
+            val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
+            parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing));selectedIndex=parts.lastIndex
+        }
+    }
+    fun addRow(){synchronized(parts){for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing));selectedIndex=parts.lastIndex}}
+    fun addWall(){synchronized(parts){for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing))};selectedIndex=parts.lastIndex}}
+    fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
+        synchronized(parts){
+            var best=-1;var bestDist=Float.MAX_VALUE
+            val viewM=FloatArray(16);val projM=FloatArray(16);val modelM=FloatArray(16);val vp=FloatArray(16);val clip=FloatArray(4)
+            Matrix.setLookAtM(viewM,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
+            Matrix.rotateM(viewM,0,angleX,1f,0f,0f);Matrix.rotateM(viewM,0,angleY,0f,1f,0f)
+            Matrix.perspectiveM(projM,0,45f,w.toFloat()/h.coerceAtLeast(1),.1f,100f);Matrix.multiplyMM(vp,0,projM,0,viewM,0)
+            parts.forEachIndexed{i,p->
+                Matrix.setIdentityM(modelM,0);Matrix.translateM(modelM,0,p.x,p.y,p.z);val m=FloatArray(16);Matrix.multiplyMM(m,0,vp,0,modelM,0)
+                Matrix.multiplyMV(clip,0,m,0,floatArrayOf(0f,0f,0f,1f),0)
+                if(clip[3]>0){val x=(clip[0]/clip[3]+1f)*w/2f;val y=(1f-clip[1]/clip[3])*h/2f;val dist=hypot(px-x,py-y);if(dist<bestDist&&dist<65f){bestDist=dist;best=i}}
+            }
+            selectedIndex=best;return best>=0
+        }
+    }
+    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();parts[selectedIndex]=p.copy(x=p.x+rx,z=p.z+rz)}}}
+    fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices)parts.removeAt(selectedIndex);selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
+    fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
+    fun setSelectedDimensions(x:Float,y:Float,z:Float){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=x,sy=y,sz=z)}}}
+    fun selectLast(){synchronized(parts){selected=parts.lastIndex;selectedIndex=parts.lastIndex}}
     private var selected=-1
-    fun duplicateLast(){synchronized(parts){if(parts.isNotEmpty()){val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex}}}
-    fun rotateLast(){synchronized(parts){if(parts.isNotEmpty()){val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selected=parts.lastIndex}}}
+    fun duplicateLast(){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selected=parts.lastIndex;selectedIndex=parts.lastIndex}else if(parts.isNotEmpty()){val p=parts.last();parts.add(p.copy(x=p.x+.45f,z=p.z+.35f));selectedIndex=parts.lastIndex}}}
+    fun rotateLast(){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];parts[selectedIndex]=p.copy(sx=p.sz,sz=p.sx)}else if(parts.isNotEmpty()){val p=parts.last();parts[parts.lastIndex]=p.copy(sx=p.sz,sz=p.sx);selectedIndex=parts.lastIndex}}}
     fun deleteLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selected=(parts.size-1).coerceAtLeast(-1)}}
     fun exportProject():String{synchronized(parts){val a=org.json.JSONArray();parts.forEach{p->a.put(org.json.JSONObject().put("kind",p.kind).put("x",p.x).put("y",p.y).put("z",p.z).put("sx",p.sx).put("sy",p.sy).put("sz",p.sz).put("nailed",p.nailed))};return org.json.JSONObject().put("parts",a).toString()}}
     fun importProject(data:String){try{val a=org.json.JSONObject(data).getJSONArray("parts");synchronized(parts){parts.clear();for(i in 0 until a.length()){val o=a.getJSONObject(i);parts.add(Part(o.optString("kind","بلوك"),o.optDouble("x").toFloat(),o.optDouble("y").toFloat(),o.optDouble("z").toFloat(),o.optDouble("sx",.5).toFloat(),o.optDouble("sy",.2).toFloat(),o.optDouble("sz",.2).toFloat(),o.optBoolean("nailed")))}}}catch(_:Exception){}}
     fun report():String{synchronized(parts){val blocks=parts.count{it.kind=="بلوك"};val wood=parts.size-blocks;val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()};return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوكات: $blocks\\nالخشب: $wood\\nالحجم التقريبي: %.3f م³".format(volume)}}
-    fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex)}}
-    fun clear(){synchronized(parts){parts.clear()}}
+    fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
+    fun clear(){synchronized(parts){parts.clear();selectedIndex=-1}}
     private fun shader(type:Int,src:String):Int{val s=GLES20.glCreateShader(type);GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);return s}
 }
