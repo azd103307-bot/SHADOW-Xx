@@ -14,7 +14,7 @@ class ConstructionSmokeTest {
     @Test
     fun launcherShowsConstructionEntry() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("ابدأ البناء والتصميم ثلاثي الأبعاد")).check(matches(isDisplayed()))
+            onView(withText("ابدأ البناء والتصميم")).check(matches(isDisplayed()))
         }
     }
 
