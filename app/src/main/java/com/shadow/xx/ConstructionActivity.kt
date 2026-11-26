@@ -126,7 +126,6 @@ class ConstructionActivity : Activity() {
         controls.addView(eighth)
         val ninth=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(ninth,"تصدير مخطط DXF"){exportDxfFile()}
-        btn(ninth,"حفظ صورة PNG"){saveSceneImage()}
         controls.addView(ninth)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
