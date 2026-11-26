@@ -555,6 +555,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         Matrix.rotateM(view,0,angleX,1f,0f,0f);Matrix.rotateM(view,0,angleY,0f,1f,0f)
         GLES20.glUseProgram(program)
         drawCube(0f,-.12f,0f,7f,.12f,7f,floatArrayOf(.22f,.27f,.32f))
+        drawGrid()
         val copy=synchronized(parts){parts.toList()}
         copy.forEachIndexed{index,p->
             val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"طوب"->floatArrayOf(.62f,.30f,.20f);"لوح","مربع","دعامة","قالب"->floatArrayOf(.57f,.32f,.14f);"عمود","كمرة","بلاطة"->floatArrayOf(.62f,.64f,.67f);else->floatArrayOf(.75f,.52f,.25f)}}
