@@ -76,7 +76,7 @@ class ConstructionActivity : Activity() {
         val third=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(third,"تراجع"){scene.renderer.undo()}
         btn(third,"إعادة"){scene.renderer.redo()}
-        btn(third,"مسح الكل"){scene.renderer.clear()}
+        btn(third,"مسح الكل"){confirmClearScene()}
         btn(third,"رجوع"){finish()}
         controls.addView(third)
         val fourth=LinearLayout(this).apply{gravity=Gravity.CENTER}
@@ -148,6 +148,11 @@ class ConstructionActivity : Activity() {
             selected=when(which){2->"لوح";3->"مربع";4->"دعامة";5->"قالب";6->"عمود";7->"كمرة";8->"بلاطة";else->items[which]}
             info.text="القطعة المختارة: ${items[which]} — المس المشهد لوضعها"
         }.show()
+    }
+    private fun confirmClearScene(){
+        AlertDialog.Builder(this).setTitle("مسح مساحة العمل")
+            .setMessage("هل تريد حذف جميع القطع من المشهد؟ سيتم حفظ الحالة السابقة في التراجع.")
+            .setNegativeButton("إلغاء",null).setPositiveButton("مسح"){_,_->scene.renderer.clear();info.text="تم مسح مساحة العمل"}.show()
     }
     private fun showProjectNotes(){
         val notes=scene.renderer.getNotes()
