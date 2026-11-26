@@ -544,9 +544,9 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         program=GLES20.glCreateProgram();GLES20.glAttachShader(program,vs);GLES20.glAttachShader(program,fs);GLES20.glLinkProgram(program)
         posHandle=GLES20.glGetAttribLocation(program,"aPosition");colorHandle=GLES20.glGetAttribLocation(program,"aColor");mvpHandle=GLES20.glGetUniformLocation(program,"uMVP")
         buffer=ByteBuffer.allocateDirect(verts.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
-        val grid=FloatArray(84*6);var gi=0
-        for(i in 0..20){val v=-5f+i*.5f
-            val lines=arrayOf(floatArrayOf(-5f,.004f,v),floatArrayOf(5f,.004f,v),floatArrayOf(v,.004f,-5f),floatArrayOf(v,.004f,5f))
+        val grid=FloatArray(484*6);var gi=0
+        for(i in 0..120){val v=-30f+i*.5f
+            val lines=arrayOf(floatArrayOf(-30f,.004f,v),floatArrayOf(30f,.004f,v),floatArrayOf(v,.004f,-30f),floatArrayOf(v,.004f,30f))
             lines.forEach{p->grid[gi++]=p[0];grid[gi++]=p[1];grid[gi++]=p[2];grid[gi++]=.30f;grid[gi++]=.40f;grid[gi++]=.50f}
         }
         gridBuffer=ByteBuffer.allocateDirect(grid.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer();gridBuffer.put(grid);gridBuffer.position(0)
@@ -557,7 +557,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         Matrix.setLookAtM(view,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
         Matrix.rotateM(view,0,angleX,1f,0f,0f);Matrix.rotateM(view,0,angleY,0f,1f,0f)
         GLES20.glUseProgram(program)
-        drawCube(0f,-.12f,0f,7f,.12f,7f,floatArrayOf(.22f,.27f,.32f))
+        drawCube(0f,-.12f,0f,60f,.12f,60f,floatArrayOf(.22f,.27f,.32f))
         drawGrid()
         val copy=synchronized(parts){parts.toList()}
         copy.forEachIndexed{index,p->
@@ -584,7 +584,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,finalM,0)
         gridBuffer.position(0);GLES20.glEnableVertexAttribArray(posHandle);GLES20.glVertexAttribPointer(posHandle,3,GLES20.GL_FLOAT,false,24,gridBuffer)
         gridBuffer.position(3);GLES20.glEnableVertexAttribArray(colorHandle);GLES20.glVertexAttribPointer(colorHandle,3,GLES20.GL_FLOAT,false,24,gridBuffer)
-        GLES20.glLineWidth(1f);GLES20.glDrawArrays(GLES20.GL_LINES,0,84)
+        GLES20.glLineWidth(1f);GLES20.glDrawArrays(GLES20.GL_LINES,0,484)
     }
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,c:FloatArray){
         val hx=sx/2;val hy=sy/2;val hz=sz/2
