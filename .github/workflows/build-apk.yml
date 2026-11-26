@@ -1,8 +1,8 @@
-name: Build SHADOW BUILD APK
+name: Build TEN PHONE MASTER APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ ten-phone-master ]
     paths:
       - '**.kt'
       - '**.kts'
@@ -10,7 +10,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/build-apk.yml'
 concurrency:
-  group: shadow-build-${{ github.ref }}
+  group: ten-phone-master-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,6 +41,18 @@ jobs:
         with:
           name: SHADOW-BUILD-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Build TEN PHONE MASTER APK
+        run: gradle --no-daemon :phonemaster:assembleDebug
+      - name: Verify TEN PHONE MASTER APK
+        run: |
+          test -s phonemaster/build/outputs/apk/debug/phonemaster-debug.apk
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging phonemaster/build/outputs/apk/debug/phonemaster-debug.apk | grep -q "package: name='com.ten.phonemaster'"
+          sha256sum phonemaster/build/outputs/apk/debug/phonemaster-debug.apk
+      - name: Upload TEN PHONE MASTER APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEN-PHONE-MASTER-debug
+          path: phonemaster/build/outputs/apk/debug/phonemaster-debug.apk
       - name: Android 12 device smoke tests
         continue-on-error: true
         timeout-minutes: 8
