@@ -199,9 +199,9 @@ class ConstructionActivity : Activity() {
             }.show()
     }
     private fun openPartLibrary(){
-        val items=arrayOf("بلوك","طوب","لوح خشب","مربع خشب","دعامة","قالب","عمود خرسانة","كمرة خرسانة","بلاطة خرسانة")
+        val items=arrayOf("بلوك","طوب","لوح خشب","مربع خشب","دعامة","قالب","عمود خرسانة","كمرة خرسانة","بلاطة خرسانة","قاعدة خرسانية","سلم خرسانة")
         AlertDialog.Builder(this).setTitle("مكتبة مواد البناء").setItems(items){_,which->
-            selected=when(which){2->"لوح";3->"مربع";4->"دعامة";5->"قالب";6->"عمود";7->"كمرة";8->"بلاطة";else->items[which]}
+            selected=when(which){2->"لوح";3->"مربع";4->"دعامة";5->"قالب";6->"عمود";7->"كمرة";8->"بلاطة";9->"قاعدة";10->"سلم";else->items[which]}
             info.text="القطعة المختارة: ${items[which]} — المس المشهد لوضعها"
         }.show()
     }
@@ -609,7 +609,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         drawGrid()
         val copy=synchronized(parts){parts.toList()}
         copy.forEachIndexed{index,p->
-            val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"طوب"->floatArrayOf(.62f,.30f,.20f);"لوح","مربع","دعامة","قالب"->floatArrayOf(.57f,.32f,.14f);"عمود","كمرة","بلاطة"->floatArrayOf(.62f,.64f,.67f);else->floatArrayOf(.75f,.52f,.25f)}}
+            val color=when(p.color){1->floatArrayOf(.48f,.52f,.58f);2->floatArrayOf(.78f,.22f,.18f);3->floatArrayOf(.20f,.58f,.34f);else->when(p.kind){"بلوك"->floatArrayOf(.68f,.53f,.36f);"طوب"->floatArrayOf(.62f,.30f,.20f);"لوح","مربع","دعامة","قالب"->floatArrayOf(.57f,.32f,.14f);"عمود","كمرة","بلاطة","قاعدة","درجة"->floatArrayOf(.62f,.64f,.67f);else->floatArrayOf(.75f,.52f,.25f)}}
             if(index==selectedIndex){color[0]=(color[0]+.25f).coerceAtMost(1f);color[1]=(color[1]+.25f).coerceAtMost(1f)}
             drawCube(p.x,p.y,p.z,p.sx,p.sy,p.sz,color)
             if(p.nailed)drawCube(p.x,p.y+p.sy/2+.018f,p.z,.045f,.035f,.045f,floatArrayOf(.78f,.82f,.88f))
@@ -665,6 +665,9 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         "عمود"->Triple(.30f,2.5f,.30f)
         "كمرة"->Triple(2f,.25f,.25f)
         "بلاطة"->Triple(2f,.15f,2f)
+        "قاعدة"->Triple(1f,.40f,1f)
+        "سلم"->Triple(1.2f,1.26f,1.96f)
+        "درجة"->Triple(1.2f,.18f,.28f)
         else->Triple(woodLength,.07f,.07f)
     }
     fun setView(view:String){when(view){"top"->{angleX=82f;angleY=0f;cameraDistance=10f};"front"->{angleX=0f;angleY=0f;cameraDistance=9f};"side"->{angleX=0f;angleY=90f;cameraDistance=9f};else->{angleX=22f;angleY=35f;cameraDistance=9f}}}
@@ -706,8 +709,16 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val placeZ=if(snapEnabled)round(z*10f)/10f else z
         synchronized(parts){
             remember()
-            val dims=dimensionsFor(kind)
-            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor))
+            if(kind=="سلم"){
+                for(i in 0 until 7){
+                    val stepHeight=.18f
+                    val tread=.28f
+                    parts.add(Part("درجة",placeX,stepHeight*i+stepHeight/2f,placeZ+tread*i+tread/2f,1.2f,stepHeight,tread,nailing,activeColor))
+                }
+            }else{
+                val dims=dimensionsFor(kind)
+                parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor))
+            }
             selectedIndex=parts.lastIndex
         }
     }
@@ -814,7 +825,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             val array=root.getJSONArray("parts")
             if(array.length()>10000)return false
             val loaded=mutableListOf<Part>()
-            val allowed=setOf("بلوك","طوب","لوح","مربع","دعامة","قالب","عمود","كمرة","بلاطة")
+            val allowed=setOf("بلوك","طوب","لوح","مربع","دعامة","قالب","عمود","كمرة","بلاطة","قاعدة","درجة")
             for(i in 0 until array.length()){
                 val o=array.getJSONObject(i)
                 val x=o.optDouble("x",Double.NaN).toFloat()
@@ -837,7 +848,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun projectCost(prices:DoubleArray):String=synchronized(parts){
         val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
         val timber=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"||it.kind=="قالب"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else maxOf(it.sx,it.sz).toDouble()}
-        val concrete=parts.filter{it.kind=="عمود"||it.kind=="كمرة"||it.kind=="بلاطة"}.sumOf{(it.sx*it.sy*it.sz).toDouble()}
+        val concrete=parts.filter{it.kind=="عمود"||it.kind=="كمرة"||it.kind=="بلاطة"||it.kind=="قاعدة"||it.kind=="درجة"}.sumOf{(it.sx*it.sy*it.sz).toDouble()}
         val p=DoubleArray(4){prices.getOrElse(it){0.0}.coerceAtLeast(0.0)}
         val blockCost=blocks*p[0];val brickCost=bricks*p[1];val timberCost=timber*p[2];val concreteCost=concrete*p[3]
         val total=blockCost+brickCost+timberCost+concreteCost
@@ -868,7 +879,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
                 pair(11,b.first.toString());pair(21,b.second.toString());pair(31,"0")
             }
             pair(0,"TEXT");pair(8,"LABELS");pair(10,p.x.toString());pair(20,p.z.toString());pair(30,"0")
-            val label=when(p.kind){"بلوك"->"BLOCK";"طوب"->"BRICK";"لوح"->"WOOD_BOARD";"مربع"->"WOOD_SQUARE";"دعامة"->"SUPPORT";"قالب"->"FORMWORK";"عمود"->"COLUMN";"كمرة"->"BEAM";"بلاطة"->"SLAB";else->"PART"}
+            val label=when(p.kind){"بلوك"->"BLOCK";"طوب"->"BRICK";"لوح"->"WOOD_BOARD";"مربع"->"WOOD_SQUARE";"دعامة"->"SUPPORT";"قالب"->"FORMWORK";"عمود"->"COLUMN";"كمرة"->"BEAM";"بلاطة"->"SLAB";"قاعدة"->"FOOTING";"درجة"->"STAIR_STEP";else->"PART"}
             pair(40,"0.12");pair(1,"${label}_${index+1}");pair(50,"0")
         }
         pair(0,"ENDSEC");pair(0,"EOF")
@@ -900,9 +911,10 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         val boards=parts.count{it.kind=="لوح"};val squares=parts.count{it.kind=="مربع"}
         val supports=parts.count{it.kind=="دعامة"};val molds=parts.count{it.kind=="قالب"}
         val columns=parts.count{it.kind=="عمود"};val beams=parts.count{it.kind=="كمرة"};val slabs=parts.count{it.kind=="بلاطة"}
+        val footings=parts.count{it.kind=="قاعدة"};val stairSteps=parts.count{it.kind=="درجة"}
         val woodLength=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"||it.kind=="قالب"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else maxOf(it.sx,it.sz).toDouble()}
         val volume=parts.sumOf{(it.sx*it.sy*it.sz).toDouble()}
-        return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوك: $blocks\\nالطوب: $bricks\\nألواح الخشب: $boards\\nمربعات الخشب: $squares\\nالدعامات: $supports\\nقوالب الصب: $molds\\nالأعمدة الخرسانية: $columns\\nالكمرات: $beams\\nالبلاطات: $slabs\\nإجمالي أطوال قطع الخشب: %.2f م\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(woodLength,volume)
+        return "تقرير ورشة البناء\\nإجمالي القطع: ${parts.size}\\nالبلوك: $blocks\\nالطوب: $bricks\\nألواح الخشب: $boards\\nمربعات الخشب: $squares\\nالدعامات: $supports\\nقوالب الصب: $molds\\nالأعمدة الخرسانية: $columns\\nالكمرات: $beams\\nالبلاطات: $slabs\\nالقواعد الخرسانية: $footings\\nدرجات السلم: $stairSteps\\nإجمالي أطوال قطع الخشب: %.2f م\\nالحجم التقريبي: %.3f م³\\n\\nشرح المشروع:\\n$projectNotes".format(woodLength,volume)
     }}
     fun removeLast(){synchronized(parts){if(parts.isNotEmpty())parts.removeAt(parts.lastIndex);selectedIndex=parts.lastIndex}}
     fun clear(){synchronized(parts){if(parts.isNotEmpty())remember();parts.clear();selectedIndex=-1}}
