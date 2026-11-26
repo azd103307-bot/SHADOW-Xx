@@ -31,6 +31,8 @@ class ConstructionActivity : Activity() {
     private lateinit var info: TextView
     private var selected = "بلوك"
     private var fixed = false
+    private var measureMode=false
+    private var measureStart:Pair<Float,Float>?=null
     private var measureCaptureUri:Uri?=null
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     override fun onCreate(savedInstanceState:Bundle?) {
@@ -70,6 +72,7 @@ class ConstructionActivity : Activity() {
         controls.addView(cameraRow)
         val snapRow=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(snapRow,"محاذاة الشبكة"){scene.renderer.snapEnabled=!scene.renderer.snapEnabled;info.text=if(scene.renderer.snapEnabled)"المحاذاة إلى 10 سم مفعّلة" else "المحاذاة متوقفة"}
+        btn(snapRow,"قياس مسافة"){measureMode=!measureMode;measureStart=null;info.text=if(measureMode)"المس نقطة البداية على أرضية المشهد" else "تم إيقاف القياس"}
         controls.addView(snapRow)
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
@@ -128,7 +131,21 @@ class ConstructionActivity : Activity() {
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         val panelHeight=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)dp(170) else dp(285)
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,panelHeight));setContentView(root)
-        scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
+        scene.onTap={x,y->
+            if(measureMode){
+                val point=scene.renderer.groundPointAt(x,y,scene.width,scene.height)
+                if(point==null){info.text="تعذر تحديد النقطة؛ جرّب مكاناً آخر"}
+                else{
+                    val start=measureStart
+                    if(start==null){measureStart=point;info.text="تم تحديد البداية؛ المس نقطة النهاية"}
+                    else{
+                        val distance=hypot((point.first-start.first).toDouble(),(point.second-start.second).toDouble())
+                        info.text="المسافة الأفقية: %.3f متر (%.1f سم)".format(distance,distance*100)
+                        measureStart=null;measureMode=false
+                    }
+                }
+            }else scene.renderer.addAt(selected,x,y,scene.width,scene.height)
+        }
         scene.onSelect={val d=scene.renderer.selectedDimensions();if(d!=null)info.text="المحدد: طول %.2f م × ارتفاع %.2f م × عرض %.2f م".format(d[0],d[1],d[2])}
         restoreAutosave()
     }
