@@ -592,14 +592,32 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         parts.add(Part(kind,x,dims.second/2,z,dims.first,dims.second,dims.third,nailing))
     }}
     fun addAt(kind:String,sx:Float,sy:Float,w:Int,h:Int){
-        val x=((sx/w.coerceAtLeast(1).toFloat())-.5f)*6f
-        val z=((.5f-(sy/h.coerceAtLeast(1).toFloat()))*6f)
+        val width=w.coerceAtLeast(1);val height=h.coerceAtLeast(1)
+        val viewM=FloatArray(16);val projM=FloatArray(16);val vp=FloatArray(16);val inverse=FloatArray(16)
+        Matrix.setLookAtM(viewM,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
+        Matrix.rotateM(viewM,0,angleX,1f,0f,0f);Matrix.rotateM(viewM,0,angleY,0f,1f,0f)
+        Matrix.perspectiveM(projM,0,45f,width.toFloat()/height,.1f,100f)
+        Matrix.multiplyMM(vp,0,projM,0,viewM,0)
+        if(!Matrix.invertM(inverse,0,vp,0))return
+        val nx=2f*sx/width-1f;val ny=1f-2f*sy/height
+        val near=FloatArray(4);val far=FloatArray(4)
+        Matrix.multiplyMV(near,0,inverse,0,floatArrayOf(nx,ny,-1f,1f),0)
+        Matrix.multiplyMV(far,0,inverse,0,floatArrayOf(nx,ny,1f,1f),0)
+        if(abs(near[3])<1e-6f||abs(far[3])<1e-6f)return
+        for(i in 0..2){near[i]/=near[3];far[i]/=far[3]}
+        val dy=far[1]-near[1]
+        if(abs(dy)<1e-6f)return
+        val t=-near[1]/dy
+        if(t<0f||!t.isFinite())return
+        val x=(near[0]+(far[0]-near[0])*t).coerceIn(-30f,30f)
+        val z=(near[2]+(far[2]-near[2])*t).coerceIn(-30f,30f)
         val placeX=if(snapEnabled)round(x*10f)/10f else x
         val placeZ=if(snapEnabled)round(z*10f)/10f else z
         synchronized(parts){
             remember()
             val dims=dimensionsFor(kind)
-            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor));selectedIndex=parts.lastIndex
+            parts.add(Part(kind,placeX,dims.second/2,placeZ,dims.first,dims.second,dims.third,nailing,activeColor))
+            selectedIndex=parts.lastIndex
         }
     }
     fun addOnTop(kind:String){synchronized(parts){
@@ -615,17 +633,40 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing,activeColor))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
         synchronized(parts){
-            var best=-1;var bestDist=Float.MAX_VALUE
-            val viewM=FloatArray(16);val projM=FloatArray(16);val modelM=FloatArray(16);val vp=FloatArray(16);val clip=FloatArray(4)
+            var best=-1;var bestDepth=Float.MAX_VALUE
+            val width=w.coerceAtLeast(1);val height=h.coerceAtLeast(1)
+            val viewM=FloatArray(16);val projM=FloatArray(16);val vp=FloatArray(16)
+            val modelM=FloatArray(16);val clip=FloatArray(4);val world=FloatArray(4)
             Matrix.setLookAtM(viewM,0,0f,4.2f,cameraDistance,0f,1f,0f,0f,1f,0f)
             Matrix.rotateM(viewM,0,angleX,1f,0f,0f);Matrix.rotateM(viewM,0,angleY,0f,1f,0f)
-            Matrix.perspectiveM(projM,0,45f,w.toFloat()/h.coerceAtLeast(1),.1f,100f);Matrix.multiplyMM(vp,0,projM,0,viewM,0)
+            Matrix.perspectiveM(projM,0,45f,width.toFloat()/height,.1f,100f)
+            Matrix.multiplyMM(vp,0,projM,0,viewM,0)
             parts.forEachIndexed{i,p->
-                Matrix.setIdentityM(modelM,0);Matrix.translateM(modelM,0,p.x,p.y,p.z);val m=FloatArray(16);Matrix.multiplyMM(m,0,vp,0,modelM,0)
-                Matrix.multiplyMV(clip,0,m,0,floatArrayOf(0f,0f,0f,1f),0)
-                if(clip[3]>0){val x=(clip[0]/clip[3]+1f)*w/2f;val y=(1f-clip[1]/clip[3])*h/2f;val dist=hypot(px-x,py-y);if(dist<bestDist&&dist<65f){bestDist=dist;best=i}}
+                Matrix.setIdentityM(modelM,0);Matrix.translateM(modelM,0,p.x,p.y,p.z)
+                val m=FloatArray(16);Matrix.multiplyMM(m,0,vp,0,modelM,0)
+                var minX=Float.MAX_VALUE;var maxX=-Float.MAX_VALUE
+                var minY=Float.MAX_VALUE;var maxY=-Float.MAX_VALUE
+                var visible=0
+                for(ix in 0..1)for(iy in 0..1)for(iz in 0..1){
+                    world[0]=if(ix==0)-p.sx/2 else p.sx/2
+                    world[1]=if(iy==0)-p.sy/2 else p.sy/2
+                    world[2]=if(iz==0)-p.sz/2 else p.sz/2
+                    world[3]=1f
+                    Matrix.multiplyMV(clip,0,m,0,world,0)
+                    if(clip[3]>0f){
+                        val x=(clip[0]/clip[3]+1f)*width/2f
+                        val y=(1f-clip[1]/clip[3])*height/2f
+                        minX=min(minX,x);maxX=max(maxX,x);minY=min(minY,y);maxY=max(maxY,y);visible++
+                    }
+                }
+                if(visible==8&&px>=minX-10f&&px<=maxX+10f&&py>=minY-10f&&py<=maxY+10f){
+                    Matrix.multiplyMV(clip,0,m,0,floatArrayOf(0f,0f,0f,1f),0)
+                    val depth=if(clip[3]>0f)clip[2]/clip[3] else Float.MAX_VALUE
+                    if(depth<bestDepth){bestDepth=depth;best=i}
+                }
             }
-            selectedIndex=best;return best>=0
+            selectedIndex=best
+            return best>=0
         }
     }
     fun beginMove(){synchronized(parts){if(selectedIndex in parts.indices)remember()}}
