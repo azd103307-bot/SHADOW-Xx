@@ -115,18 +115,42 @@ class ConstructionActivity : Activity() {
         }.show()
     }
     private fun measurementDialog(){
-        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,8,24,0)}
-        val length=EditText(this).apply{hint="الطول بالمتر";inputType=8194}
-        val width=EditText(this).apply{hint="العرض بالمتر";inputType=8194}
-        val height=EditText(this).apply{hint="الارتفاع بالمتر";inputType=8194}
-        listOf(length,width,height).forEach{box.addView(it)}
-        AlertDialog.Builder(this).setTitle("حاسبة التمتير").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
-            val l=length.text.toString().toDoubleOrNull()?:0.0
-            val w=width.text.toString().toDoubleOrNull()?:0.0
-            val h=height.text.toString().toDoubleOrNull()?:0.0
-            val area=l*h;val volume=l*w*h;val blocks=if(area>0)kotlin.math.ceil(area/(.4*.2)).toInt() else 0
-            AlertDialog.Builder(this).setTitle("نتيجة الحساب").setMessage("مساحة الجدار: %.2f م²\\nالحجم: %.3f م³\\nالبلوك التقديري (40×20 سم): %d".format(area,volume,blocks)).setPositiveButton("حسناً",null).show()
-        }.show()
+        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(22,8,22,0)}
+        fun field(hintText:String,value:String="",decimal:Boolean=true)=EditText(this).apply{
+            hint=hintText;if(value.isNotEmpty())setText(value);inputType=if(decimal)8194 else 2
+        }
+        val length=field("طول الجدار بالمتر")
+        val height=field("ارتفاع الجدار بالمتر")
+        val thickness=field("سماكة الجدار بالمتر","0.20")
+        val opening=field("مساحة الأبواب والنوافذ بالمتر المربع","0")
+        val blockL=field("طول البلوك بالمتر","0.40")
+        val blockH=field("ارتفاع البلوك بالمتر","0.20")
+        val joint=field("سماكة المونة بين البلوكات بالمتر","0.01")
+        val price=field("سعر البلوكة الواحدة (اختياري)","0")
+        val fields=listOf(length,height,thickness,opening,blockL,blockH,joint,price)
+        fields.forEach{box.addView(it)}
+        AlertDialog.Builder(this).setTitle("التمتير وحساب البلوك").setView(ScrollView(this).apply{addView(box)})
+            .setNegativeButton("إلغاء",null).setPositiveButton("احسب"){_,_->
+                val l=length.text.toString().toDoubleOrNull()?:0.0
+                val h=height.text.toString().toDoubleOrNull()?:0.0
+                val t=thickness.text.toString().toDoubleOrNull()?:0.0
+                val op=opening.text.toString().toDoubleOrNull()?:0.0
+                val bl=blockL.text.toString().toDoubleOrNull()?:.4
+                val bh=blockH.text.toString().toDoubleOrNull()?:.2
+                val j=joint.text.toString().toDoubleOrNull()?:.01
+                val unit=price.text.toString().toDoubleOrNull()?:0.0
+                val gross=l*h
+                val net=(gross-op).coerceAtLeast(0.0)
+                val module=(bl+j)*(bh+j)
+                val count=if(module>0)kotlin.math.ceil(net/module).toInt() else 0
+                val volume=net*t
+                val cost=count*unit
+                val mortar=(volume-count*bl*bh*t).coerceAtLeast(0.0)
+                val result="مساحة الجدار الإجمالية: %.2f م²\\nمساحة الفتحات: %.2f م²\\nالمساحة الصافية: %.2f م²\\nحجم الجدار التقريبي: %.3f م³\\nعدد البلوك التقديري: %d قطعة\\nحجم المونة التقريبي: %.3f م³\\nتكلفة البلوك حسب السعر المدخل: %.2f".format(gross,op,net,volume,count,mortar,cost)
+                AlertDialog.Builder(this).setTitle("نتيجة التمتير").setMessage(result)
+                    .setNeutralButton("نسخ التقرير"){_,_->(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("التمتير",result))}
+                    .setPositiveButton("إغلاق",null).show()
+            }.show()
     }
     override fun onResume(){super.onResume();if(::scene.isInitialized)scene.onResume()}
     override fun onPause(){if(::scene.isInitialized)scene.onPause();super.onPause()}
