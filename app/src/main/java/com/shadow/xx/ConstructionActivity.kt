@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.PointF
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -94,10 +96,54 @@ class ConstructionActivity : Activity() {
         val seventh=LinearLayout(this).apply{gravity=Gravity.CENTER}
         btn(seventh,"تصدير ملف المشروع"){exportProjectFile()}
         btn(seventh,"استيراد ملف مشروع"){importProjectFile()}
+        btn(seventh,"قياس من صورة"){chooseMeasurePhoto()}
         controls.addView(seventh)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
+    }
+    private fun chooseMeasurePhoto(){
+        val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="image/*"}
+        startActivityForResult(intent,4103)
+    }
+    private fun decodeMeasurePhoto(uri:android.net.Uri):Bitmap{
+        val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+        contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it,null,bounds)}
+        var sample=1
+        while(bounds.outWidth/sample>1800||bounds.outHeight/sample>1800)sample*=2
+        val opts=BitmapFactory.Options().apply{inSampleSize=sample}
+        return contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it,null,opts)}
+            ?:throw IllegalStateException("تعذر فتح الصورة")
+    }
+    private fun showPhotoMeasure(bitmap:Bitmap){
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(12,8,12,4)}
+        val reference=EditText(this).apply{hint="طول مرجعي معروف بالمتر، مثل 1.00";inputType=8194}
+        val message=TextView(this).apply{text="أدخل طولاً تعرفه في الصورة، ثم المس نقطتي بدايته ونهايته لمعايرة القياس.";textSize=13f}
+        val image=ImageView(this).apply{setImageBitmap(bitmap);scaleType=ImageView.ScaleType.FIT_XY;contentDescription="صورة القياس"}
+        panel.addView(reference);panel.addView(message);panel.addView(image,LinearLayout.LayoutParams(-1,dp(300)))
+        var first:PointF?=null
+        var metersPerPixel:Double?=null
+        image.setOnTouchListener{_,event->
+            if(event.action==MotionEvent.ACTION_DOWN){
+                val a=first
+                if(a==null){first=PointF(event.x,event.y);message.text="تم تحديد النقطة الأولى؛ المس النقطة الثانية."}
+                else{
+                    val pixels=hypot((event.x-a.x).toDouble(),(event.y-a.y).toDouble()).coerceAtLeast(1.0)
+                    if(metersPerPixel==null){
+                        val known=reference.text.toString().toDoubleOrNull()
+                        if(known==null||known<=0){message.text="أدخل طولاً مرجعياً صحيحاً أولاً."}
+                        else{metersPerPixel=known/pixels;message.text="تمت المعايرة. المس نقطتين لقياس أي مسافة أخرى."}
+                    }else{
+                        val measured=pixels*metersPerPixel!!
+                        message.text="المسافة التقريبية: %.3f متر (%.1f سم)".format(measured,measured*100)
+                    }
+                    first=null
+                }
+            }
+            true
+        }
+        AlertDialog.Builder(this).setTitle("القياس اليدوي من صورة").setView(ScrollView(this).apply{addView(panel)})
+            .setPositiveButton("إغلاق",null).show()
     }
     private fun exportProjectFile(){
         val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
@@ -126,6 +172,9 @@ class ConstructionActivity : Activity() {
                     ?:throw IllegalStateException("تعذر قراءة الملف")
                 scene.renderer.importProject(json)
                 Toast.makeText(this,"تم استيراد ملف المشروع",Toast.LENGTH_LONG).show()
+            }else if(requestCode==4103){
+                val photo=decodeMeasurePhoto(data.data!!)
+                showPhotoMeasure(photo)
             }
         }catch(e:Exception){Toast.makeText(this,"تعذر تنفيذ العملية: ${e.message}",Toast.LENGTH_LONG).show()}
     }
