@@ -2,6 +2,7 @@ package com.shadow.xx
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -61,8 +62,38 @@ class ConstructionActivity : Activity() {
         btn(fifth,"التمتير"){measurementDialog()}
         btn(fifth,"تقرير ونسخ"){val t=scene.renderer.report();(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("تقرير البناء",t));info.text="تم نسخ تقرير الكميات"}
         controls.addView(fifth)
+        val sixth=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(sixth,"حفظ باسم"){saveNamedProject()}
+        btn(sixth,"مشاريعي المحفوظة"){openProjectList()}
+        btn(sixth,"مشاركة التقرير"){shareReport()}
+        controls.addView(sixth)
         root.addView(controls);setContentView(root)
         scene.onTap={scene.renderer.add(selected)}
+    }
+    private fun saveNamedProject(){
+        val input=EditText(this).apply{hint="اسم المشروع"}
+        AlertDialog.Builder(this).setTitle("حفظ مشروع جديد").setView(input).setNegativeButton("إلغاء",null).setPositiveButton("حفظ"){_,_->
+            val name=input.text.toString().trim()
+            if(name.isBlank()){Toast.makeText(this,"اكتب اسم المشروع أولاً",Toast.LENGTH_SHORT).show();return@setPositiveButton}
+            val prefs=getSharedPreferences("shadow_build_projects",MODE_PRIVATE)
+            val names=prefs.getStringSet("names",emptySet())?.toMutableSet()?:mutableSetOf()
+            prefs.edit().putString("project_"+name,scene.renderer.exportProject()).putStringSet("names",names.apply{add(name)}).apply()
+            info.text="تم حفظ المشروع: $name"
+        }.show()
+    }
+    private fun openProjectList(){
+        val prefs=getSharedPreferences("shadow_build_projects",MODE_PRIVATE)
+        val names=prefs.getStringSet("names",emptySet())?.toList()?.sorted()?:emptyList()
+        if(names.isEmpty()){Toast.makeText(this,"لا توجد مشاريع محفوظة بعد",Toast.LENGTH_SHORT).show();return}
+        AlertDialog.Builder(this).setTitle("اختر مشروعاً لفتحه").setItems(names.toTypedArray()){_,which->
+            val name=names[which]
+            prefs.getString("project_"+name,null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع: $name"}
+        }.setNegativeButton("إغلاق",null).show()
+    }
+    private fun shareReport(){
+        val report=scene.renderer.report()
+        val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"تقرير مشروع البناء");putExtra(Intent.EXTRA_TEXT,report)}
+        startActivity(Intent.createChooser(send,"مشاركة تقرير البناء"))
     }
     private fun measurementDialog(){
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,8,24,0)}
