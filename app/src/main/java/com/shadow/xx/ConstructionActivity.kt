@@ -54,6 +54,7 @@ class ConstructionActivity : Activity() {
         btn(cameraRow,"أعلى"){scene.renderer.setView("top")}
         btn(cameraRow,"أمام"){scene.renderer.setView("front")}
         btn(cameraRow,"جانب"){scene.renderer.setView("side")}
+        btn(cameraRow,"الشبكة"){scene.renderer.gridVisible=!scene.renderer.gridVisible;info.text=if(scene.renderer.gridVisible)"شبكة القياس ظاهرة" else "شبكة القياس مخفية"}
         controls.addView(cameraRow)
         info=TextView(this).apply{text="اختر بلوك أو خشب، ثم المس المشهد لإضافته. اسحب بإصبعك للتدوير وبإصبعين للتقريب.";textSize=12f;setTextColor(0xFFE2E8F0.toInt());gravity=Gravity.CENTER;setPadding(2,dp(5),2,dp(5))}
         controls.addView(info)
