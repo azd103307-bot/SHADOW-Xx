@@ -400,7 +400,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     @Volatile var gridVisible=true
     @Volatile var snapEnabled=true
     @Volatile var activeColor=0
-    private var selectedIndex=-1
+    @Volatile private var selectedIndex=-1
     private var viewportW=1
     private var viewportH=1
     private var program=0
