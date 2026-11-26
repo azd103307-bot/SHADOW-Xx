@@ -533,7 +533,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         if(selectedIndex !in parts.indices)return
         remember()
         val base=parts[selectedIndex]
-        val dims=when(kind){"بلوك"->Triple(.68f,.32f,.32f);"لوح"->Triple(woodLength,.035f,.10f);"دعامة"->Triple(.07f,woodLength,.07f);"قالب"->Triple(woodLength,.08f,.18f);else->Triple(woodLength,.07f,.07f)}
+        val dims=dimensionsFor(kind)
         parts.add(Part(kind,base.x,base.y+base.sy/2+dims.second/2,base.z,dims.first,dims.second,dims.third,nailing,activeColor))
         selectedIndex=parts.lastIndex
     }}
