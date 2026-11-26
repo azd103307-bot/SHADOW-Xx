@@ -2,6 +2,11 @@ package com.shadow.xx
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.content.Intent
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
@@ -81,6 +86,7 @@ class ConstructionActivity : Activity() {
         btn(sixth,"حفظ باسم"){saveNamedProject()}
         btn(sixth,"مشاريعي المحفوظة"){openProjectList()}
         btn(sixth,"مشاركة التقرير"){shareReport()}
+        btn(sixth,"حفظ صورة"){saveSceneImage()}
         controls.addView(sixth)
         root.addView(controls);setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
@@ -104,6 +110,24 @@ class ConstructionActivity : Activity() {
             val name=names[which]
             prefs.getString("project_"+name,null)?.let{scene.renderer.importProject(it);info.text="تم فتح المشروع: $name"}
         }.setNegativeButton("إغلاق",null).show()
+    }
+    private fun saveSceneImage(){
+        scene.renderer.captureWhenReady { bitmap ->
+            runOnUiThread {
+                try {
+                    val values=ContentValues().apply {
+                        put(MediaStore.Images.Media.DISPLAY_NAME,"SHADOW_BUILD_${System.currentTimeMillis()}.png")
+                        put(MediaStore.Images.Media.MIME_TYPE,"image/png")
+                        if(Build.VERSION.SDK_INT>=29)put(MediaStore.Images.Media.RELATIVE_PATH,Environment.DIRECTORY_PICTURES+"/SHADOW BUILD")
+                    }
+                    val uri=contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)
+                    if(uri==null)throw IllegalStateException("تعذر إنشاء ملف الصورة")
+                    val stream=contentResolver.openOutputStream(uri)?:throw IllegalStateException("تعذر فتح ملف الصورة")
+                    stream.use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+                    Toast.makeText(this,"تم حفظ صورة المشروع في الصور",Toast.LENGTH_LONG).show()
+                }catch(e:Exception){Toast.makeText(this,"تعذر حفظ الصورة: ${e.message}",Toast.LENGTH_LONG).show()}
+            }
+        }
     }
     private fun shareReport(){
         val report=scene.renderer.report()
@@ -192,6 +216,8 @@ private class BuildSurface(activity:Activity):GLSurfaceView(activity){
 }
 
 private class BuildRenderer:GLSurfaceView.Renderer{
+    @Volatile private var captureCallback:((Bitmap)->Unit)?=null
+    fun captureWhenReady(callback:(Bitmap)->Unit){captureCallback=callback}
     data class Part(val kind:String,val x:Float,val y:Float,val z:Float,val sx:Float,val sy:Float,val sz:Float,val nailed:Boolean)
     private val parts=mutableListOf<Part>()
     private val undoStack=java.util.ArrayDeque<List<Part>>()
@@ -249,6 +275,17 @@ private class BuildRenderer:GLSurfaceView.Renderer{
             drawCube(p.x,p.y,p.z,p.sx,p.sy,p.sz,color)
             if(p.nailed)drawCube(p.x,p.y+p.sy/2+.018f,p.z,.045f,.035f,.045f,floatArrayOf(.78f,.82f,.88f))
         }
+        deliverCaptureIfRequested()
+    }
+    private fun deliverCaptureIfRequested(){
+        val callback=captureCallback?:return
+        captureCallback=null
+        val w=viewportW.coerceAtLeast(1);val h=viewportH.coerceAtLeast(1)
+        val bytes=ByteBuffer.allocateDirect(w*h*4).order(ByteOrder.nativeOrder())
+        GLES20.glReadPixels(0,0,w,h,GLES20.GL_RGBA,GLES20.GL_UNSIGNED_BYTE,bytes)
+        bytes.position(0);val raw=IntArray(w*h);bytes.asIntBuffer().get(raw);val pixels=IntArray(w*h)
+        for(y in 0 until h)for(x in 0 until w){val v=raw[y*w+x];val r=v and 255;val g=(v shr 8) and 255;val b=(v shr 16) and 255;val a=(v ushr 24) and 255;pixels[(h-1-y)*w+x]=(a shl 24) or (r shl 16) or (g shl 8) or b}
+        val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);bitmap.setPixels(pixels,0,w,0,0,w,h);callback(bitmap)
     }
     private fun drawGrid(){
         if(!gridVisible)return
