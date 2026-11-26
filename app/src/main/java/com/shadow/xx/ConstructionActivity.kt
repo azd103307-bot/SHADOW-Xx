@@ -408,7 +408,7 @@ class ConstructionActivity : Activity() {
         listOf(a,b,d).forEach{box.addView(it)}
         AlertDialog.Builder(this).setTitle("تعديل أبعاد القطعة").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("تطبيق"){_,_->
             val x=a.text.toString().toFloatOrNull();val y=b.text.toString().toFloatOrNull();val z=d.text.toString().toFloatOrNull()
-            if(x!=null&&y!=null&&z!=null&&x>0&&y>0&&z>0)scene.renderer.setSelectedDimensions(x,y,z) else info.text="أدخل أبعاداً صحيحة أكبر من صفر"
+            if(x!=null&&y!=null&&z!=null&&x.isFinite()&&y.isFinite()&&z.isFinite()&&x in .001f..100f&&y in .001f..100f&&z in .001f..100f)scene.renderer.setSelectedDimensions(x,y,z) else info.text="أدخل أبعاداً صحيحة بين 1 ملم و100 متر"
         }.show()
     }
     private fun measurementDialog(){
@@ -671,7 +671,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         parts.add(Part(kind,base.x,base.y+base.sy/2+dims.second/2,base.z,dims.first,dims.second,dims.third,nailing,activeColor))
         selectedIndex=parts.lastIndex
     }}
-    fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceAtLeast(p.sy/2))}}}
+    fun raiseSelected(amount:Float){synchronized(parts){if(selectedIndex in parts.indices){remember();val p=parts[selectedIndex];parts[selectedIndex]=p.copy(y=(p.y+amount).coerceIn(p.sy/2,100f))}}}
     fun addRow(){synchronized(parts){remember();for(i in 0 until 8)parts.add(Part("بلوك",(i-3.5f)*.68f,.16f,0f,.68f,.32f,.32f,nailing,activeColor));selectedIndex=parts.lastIndex}}
     fun addWall(){synchronized(parts){remember();for(row in 0 until 4)for(i in 0 until 8){val shift=if(row%2==0)0f else .34f;parts.add(Part("بلوك",(i-3.5f)*.68f+shift,.16f+row*.32f,0f,.68f,.32f,.32f,nailing,activeColor))};selectedIndex=parts.lastIndex}}
     fun pick(px:Float,py:Float,w:Int,h:Int):Boolean{
@@ -713,7 +713,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
         }
     }
     fun beginMove(){synchronized(parts){if(selectedIndex in parts.indices)remember()}}
-    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();val nx=p.x+rx;val nz=p.z+rz;parts[selectedIndex]=p.copy(x=if(snapEnabled)round(nx*10f)/10f else nx,z=if(snapEnabled)round(nz*10f)/10f else nz)}}}
+    fun moveSelected(dx:Float,dy:Float,w:Int,h:Int){synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];val wx=dx/w.coerceAtLeast(1)*6f;val wz=dy/h.coerceAtLeast(1)*-6f;val a=Math.toRadians(angleY.toDouble());val rx=(wx*cos(a)-wz*sin(a)).toFloat();val rz=(wx*sin(a)+wz*cos(a)).toFloat();val nx=(p.x+rx).coerceIn(-30f,30f);val nz=(p.z+rz).coerceIn(-30f,30f);parts[selectedIndex]=p.copy(x=if(snapEnabled)round(nx*10f)/10f else nx,z=if(snapEnabled)round(nz*10f)/10f else nz)}}}
     fun applyColor(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts[selectedIndex]=parts[selectedIndex].copy(color=activeColor)}}}
     fun deleteSelected(){synchronized(parts){if(selectedIndex in parts.indices){remember();parts.removeAt(selectedIndex)};selectedIndex=(selectedIndex.coerceAtMost(parts.lastIndex)).coerceAtLeast(-1)}}
     fun selectedDimensions():FloatArray?=synchronized(parts){if(selectedIndex in parts.indices){val p=parts[selectedIndex];floatArrayOf(p.sx,p.sy,p.sz)}else null}
