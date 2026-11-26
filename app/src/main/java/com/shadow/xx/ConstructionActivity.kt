@@ -91,9 +91,43 @@ class ConstructionActivity : Activity() {
         btn(sixth,"مشاركة التقرير"){shareReport()}
         btn(sixth,"حفظ صورة"){saveSceneImage()}
         controls.addView(sixth)
+        val seventh=LinearLayout(this).apply{gravity=Gravity.CENTER}
+        btn(seventh,"تصدير ملف المشروع"){exportProjectFile()}
+        btn(seventh,"استيراد ملف مشروع"){importProjectFile()}
+        controls.addView(seventh)
         val controlsScroll=ScrollView(this).apply{isFillViewport=false;addView(controls)}
         root.addView(controlsScroll,LinearLayout.LayoutParams(-1,dp(285)));setContentView(root)
         scene.onTap={x,y->scene.renderer.addAt(selected,x,y,scene.width,scene.height)}
+    }
+    private fun exportProjectFile(){
+        val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{
+            addCategory(Intent.CATEGORY_OPENABLE);type="application/json"
+            putExtra(Intent.EXTRA_TITLE,"shadow_build_project.json")
+        }
+        startActivityForResult(intent,4101)
+    }
+    private fun importProjectFile(){
+        val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply{
+            addCategory(Intent.CATEGORY_OPENABLE);type="application/json"
+        }
+        startActivityForResult(intent,4102)
+    }
+    @Deprecated("Deprecated in Android API; retained for broad device compatibility")
+    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){
+        super.onActivityResult(requestCode,resultCode,data)
+        if(resultCode!=RESULT_OK||data?.data==null)return
+        try{
+            if(requestCode==4101){
+                val json=scene.renderer.exportProject()
+                contentResolver.openOutputStream(data.data!!)?.use{it.write(json.toByteArray(Charsets.UTF_8))}
+                Toast.makeText(this,"تم تصدير ملف المشروع",Toast.LENGTH_LONG).show()
+            }else if(requestCode==4102){
+                val json=contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText()}
+                    ?:throw IllegalStateException("تعذر قراءة الملف")
+                scene.renderer.importProject(json)
+                Toast.makeText(this,"تم استيراد ملف المشروع",Toast.LENGTH_LONG).show()
+            }
+        }catch(e:Exception){Toast.makeText(this,"تعذر تنفيذ العملية: ${e.message}",Toast.LENGTH_LONG).show()}
     }
     private fun saveNamedProject(){
         val input=EditText(this).apply{hint="اسم المشروع"}
