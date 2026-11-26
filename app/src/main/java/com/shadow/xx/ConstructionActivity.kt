@@ -627,7 +627,7 @@ private class BuildRenderer:GLSurfaceView.Renderer{
     }
     fun projectCost(prices:DoubleArray):String=synchronized(parts){
         val blocks=parts.count{it.kind=="بلوك"};val bricks=parts.count{it.kind=="طوب"}
-        val timber=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else it.sx.toDouble()}
+        val timber=parts.filter{it.kind=="لوح"||it.kind=="مربع"||it.kind=="دعامة"}.sumOf{if(it.kind=="دعامة")it.sy.toDouble() else maxOf(it.sx,it.sz).toDouble()}
         val concrete=parts.filter{it.kind=="عمود"||it.kind=="كمرة"||it.kind=="بلاطة"}.sumOf{(it.sx*it.sy*it.sz).toDouble()}
         val p=DoubleArray(4){prices.getOrElse(it){0.0}.coerceAtLeast(0.0)}
         val blockCost=blocks*p[0];val brickCost=bricks*p[1];val timberCost=timber*p[2];val concreteCost=concrete*p[3]
