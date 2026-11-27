@@ -9,6 +9,7 @@ A C++ Unreal Engine 5 starter for a physics-based glowing-ball arena.
 - Jump with grounded-state detection.
 - Runtime-built arena floor, perimeter walls, pillars, and low barriers.
 - Twelve floating cyan energy pickups with overlap collection and a completion message.
+- Six roaming multicolor physics balls that roll through the arena and collide with the player and environment.
 - Four illuminated arena beacons.
 - Mobile virtual joystick configuration and gamepad jump binding.
 - Mobile-friendlier renderer settings: mobile HDR, bloom, and no Lumen dependency.
