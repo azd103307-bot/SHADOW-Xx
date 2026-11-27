@@ -65,6 +65,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
     private val raceCoins = IntArray(9) { -1 }
     private val raceHits = IntArray(10) { -1 }
     private val adventureCoins = IntArray(13) { -1 }
+    private val adventureHits = IntArray(9) { -1 }
     private val flightRings = IntArray(6) { -1 }
     private val spaceTargets = IntArray(8) { -1 }
 
@@ -209,6 +210,17 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
                         adventureCoins[i]=cycle; score+=5
                     }
                 }
+                for(i in 0..8) {
+                    val phase=i*6.4f+worldTime*5f
+                    val z=-(phase%58f)-4f
+                    val cycle=floor(phase/58f).toInt()
+                    val side=if(i%2==0) -1f else 1f
+                    val x=side*(5.2f+(i%3)*1.1f)
+                    if(z in -1.35f..-.1f && abs(playerX-x)<1.25f && playerLift<.8f && adventureHits[i]!=cycle) {
+                        adventureHits[i]=cycle
+                        hitPlayer()
+                    }
+                }
                 if(tap) boostTime=.35f
             }
             4 -> {
@@ -329,7 +341,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
         sphereAt(0f,.6f,-31f,1.7f,floatArrayOf(.55f,.32f,.12f,1f))
         box(0f,.2f,-31f,2.5f,.4f,2.5f,wood)
         for(i in 0..8) {
-            val z=-i*6.4f-4f
+            val z=-((i*6.4f+worldTime*5f)%58f)-4f
             val side=if(i%2==0) -1f else 1f
             val x=side*(5.2f+(i%3)*1.1f)
             box(x,.36f,z,1.1f,.7f,1.15f,floatArrayOf(.31f,.27f,.2f,1f))
