@@ -18,6 +18,16 @@ class GameActivity : Activity() {
     private lateinit var engine: ArenaRenderer
     private lateinit var scoreView: TextView
     private lateinit var livesView: TextView
+    private var leftHeld=false
+    private var rightHeld=false
+    private var upHeld=false
+    private var downHeld=false
+    private fun refreshMovement() {
+        if(::engine.isInitialized) {
+            engine.moveX=(if(rightHeld) 1f else 0f)-(if(leftHeld) 1f else 0f)
+            engine.moveY=(if(upHeld) 1f else 0f)-(if(downHeld) 1f else 0f)
+        }
+    }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     private fun pill(color:Int): GradientDrawable = GradientDrawable().apply {
         setColor(color); cornerRadius=dp(18).toFloat(); setStroke(dp(1),0x55FFFFFF)
@@ -66,17 +76,17 @@ class GameActivity : Activity() {
                 }
             }
         }
-        row1.addView(control("▲",{engine.moveY=1f},{engine.moveY=0f}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { bottomMargin=dp(3) })
-        row2.addView(control("◀",{engine.moveX=-1f},{engine.moveX=0f}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { marginEnd=dp(4) })
-        row2.addView(control("▼",{engine.moveY=-1f},{engine.moveY=0f}),LinearLayout.LayoutParams(dp(62),dp(48)))
-        row2.addView(control("▶",{engine.moveX=1f},{engine.moveX=0f}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { marginStart=dp(4) })
+        row1.addView(control("▲",{upHeld=true;refreshMovement()},{upHeld=false;refreshMovement()}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { bottomMargin=dp(3) })
+        row2.addView(control("◀",{leftHeld=true;refreshMovement()},{leftHeld=false;refreshMovement()}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { marginEnd=dp(4) })
+        row2.addView(control("▼",{downHeld=true;refreshMovement()},{downHeld=false;refreshMovement()}),LinearLayout.LayoutParams(dp(62),dp(48)))
+        row2.addView(control("▶",{rightHeld=true;refreshMovement()},{rightHeld=false;refreshMovement()}),LinearLayout.LayoutParams(dp(62),dp(48)).apply { marginStart=dp(4) })
         dpad.addView(row1); dpad.addView(row2)
         bottom.addView(dpad)
         bottom.addView(Space(this),LinearLayout.LayoutParams(0,dp(1),1f))
         val actionLabel=when(mode) { 1 -> "⚡ تسريع"; 2 -> "⚽ تسديد"; 5 -> "🚀 إطلاق"; else -> "✦ تفاعل" }
         bottom.addView(control(actionLabel,{engine.action=true},{engine.action=false}),LinearLayout.LayoutParams(dp(124),dp(58)))
         val jumpControl=if(mode>=4) {
-            control("⬆ ارتفاع",{engine.moveY=1f},{engine.moveY=0f})
+            control("⬆ ارتفاع",{upHeld=true;refreshMovement()},{upHeld=false;refreshMovement()})
         } else {
             control("⬆ قفز",{engine.jumpAction=true},{engine.jumpAction=false})
         }
@@ -86,6 +96,6 @@ class GameActivity : Activity() {
         engine.onHud={points,health->runOnUiThread { scoreView.text="النقاط: $points"; livesView.text="❤️ $health" }}
         setContentView(root)
     }
-    override fun onPause(){ super.onPause(); if(::surface.isInitialized) surface.onPause() }
+    override fun onPause(){ leftHeld=false; rightHeld=false; upHeld=false; downHeld=false; refreshMovement(); super.onPause(); if(::surface.isInitialized) surface.onPause() }
     override fun onResume(){ super.onResume(); if(::surface.isInitialized) surface.onResume() }
 }
