@@ -9,4 +9,5 @@ class UNREALGLOWBALLS_API AGlowBallGameMode : public AGameModeBase
     GENERATED_BODY()
 public:
     AGlowBallGameMode();
+    virtual void BeginPlay() override;
 };
