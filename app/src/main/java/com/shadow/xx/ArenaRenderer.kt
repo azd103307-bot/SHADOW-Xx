@@ -50,6 +50,9 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
     private var ballZ = -4f
     private var ballV = 0f
     private var shotZ = -100f
+    private var shotX = 0f
+    private var shotY = 0f
+    private var ballKicked = false
     private var boostTime = 0f
     private var damageCooldown = 0f
     private var wasAction = false
@@ -187,11 +190,13 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
                 ballZ+=ballV*dt
                 ballV*=.992f
                 if(ballZ < -28f) {
-                    if(abs(playerX)<3.5f) score+=1
-                    ballZ=-4f; ballV=0f
+                    if(ballKicked) score+=1
+                    ballZ=-4f; ballV=0f; ballKicked=false
                 }
                 if(ballZ > -2f) { ballZ=-4f; ballV=0f }
-                if(tap && abs(ballZ+4f)<2f) { ballV=-24f; ballZ=-3.8f }
+                if(tap && !ballKicked && abs(ballZ+4f)<2f && abs(playerX)<4.5f) {
+                    ballV=-24f; ballZ=-3.8f; ballKicked=true
+                }
             }
             3 -> {
                 for(i in 0..12) {
@@ -217,7 +222,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
                 }
             }
             5 -> {
-                if(tap) shotZ=-1f
+                if(tap && shotZ<=-90f) { shotZ=-1f; shotX=playerX; shotY=playerY }
                 if(shotZ>-90f) {
                     shotZ-=dt*32f
                     for(i in 0..7) {
@@ -226,7 +231,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
                         val cycle=floor(phase/46f).toInt()
                         val x=sin(i*2.1f)*6f
                         val y=cos(i*1.5f)*3f
-                        if(abs(z-shotZ)<1.25f && abs(playerX-x)<1.7f && abs(playerY-y)<1.7f && spaceTargets[i]!=cycle) {
+                        if(abs(z-shotZ)<1.45f && abs(shotX-x)<1.15f && abs(shotY-y)<1.15f && spaceTargets[i]!=cycle) {
                             spaceTargets[i]=cycle; score+=15; shotZ=-100f
                         }
                     }
@@ -379,8 +384,8 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
             box(13f-i*2.4f,-5f,z,1.2f,.25f,.25f,gold,-i*18f)
         }
         if(shotZ>-90f) {
-            sphereAt(playerX,playerY,shotZ,.2f,gold)
-            sphereAt(playerX,playerY,shotZ+.3f,.1f,red)
+            sphereAt(shotX,shotY,shotZ,.2f,gold)
+            sphereAt(shotX,shotY,shotZ+.3f,.1f,red)
         }
     }
 
