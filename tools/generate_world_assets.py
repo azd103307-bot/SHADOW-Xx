@@ -14,14 +14,14 @@ def save_rgb(path, channels):
     arr = np.concatenate(channels, axis=2).clip(0, 255).astype(np.uint8)
     Image.fromarray(arr, "RGB").save(path, format="PNG", compress_level=9, optimize=True)
 
-def make_ground(name, seed, size=1024):
+def make_ground(name, seed, size=512):
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
-    n = noise(rng, size, size, 13.0)
-    fine = noise(rng, size, size, 6.0)
-    wave = (np.sin(x / 23.0) + np.sin(y / 31.0) + np.sin((x+y) / 47.0)) * 2.6
+    n = noise(rng, size, size, 2.0)
+    fine = noise(rng, size, size, 1.0)
+    wave = (np.sin(x / 23.0) + np.sin(y / 31.0) + np.sin((x+y) / 47.0)) * 1.8
     if name == "city":
-        aggregate = rng.normal(0, 8, (size, size, 1))
+        aggregate = rng.normal(0, 1.5, (size, size, 1))
         base = 72 + wave[..., None] + n + aggregate + fine
         # Fine aggregate and occasional hairline road wear.
         cracks = ((np.sin((x + 0.22*y) / 61.0) > .997) | (np.sin((y - .13*x) / 83.0) > .999))
@@ -29,12 +29,12 @@ def make_ground(name, seed, size=1024):
         save_rgb(OUT / "city_ground.png", [base*.98, base, base*1.04])
     elif name == "football":
         mowing = np.sin(x / 92.0) * 8.0
-        blades = rng.normal(0, 12, (size, size, 1))
+        blades = rng.normal(0, 2.0, (size, size, 1))
         base = 82 + mowing[..., None] + wave[..., None] + n + blades + fine
         save_rgb(OUT / "football_ground.png", [base*.47, base*1.32, base*.52])
     elif name == "forest":
         patches = (np.sin(x/79.0) * np.cos(y/67.0) + np.sin((x-y)/113.0)) * 10
-        pebbles = rng.normal(0, 15, (size, size, 1))
+        pebbles = rng.normal(0, 2.2, (size, size, 1))
         base = 91 + patches[..., None] + n + pebbles + fine
         save_rgb(OUT / "forest_ground.png", [base*1.28, base*.91, base*.56])
     elif name == "flight":
@@ -47,11 +47,11 @@ def make_ground(name, seed, size=1024):
         base = 42 + bands[..., None] + n + fine
         save_rgb(OUT / "space_ground.png", [base*1.40 + stars[...,0,None]*155, base*.60, base*1.72 + stars[...,0,None]*190])
 
-def make_sky(name, seed, w=768, h=384):
+def make_sky(name, seed, w=512, h=256):
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:h, 0:w].astype(np.float32)
     t = (y / max(1, h-1))[..., None]
-    grain = rng.normal(0, 4.2, (h, w, 1))
+    grain = rng.normal(0, 1.0, (h, w, 1))
     cloud = (np.sin(x/71.0 + y/47.0) + np.cos(x/113.0-y/59.0) + np.sin((x+y)/137.0)) / 3.0
     if name == "city":
         top = np.array([13, 35, 70], np.float32)
