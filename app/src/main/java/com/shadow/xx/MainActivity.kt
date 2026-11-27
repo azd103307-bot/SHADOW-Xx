@@ -33,7 +33,7 @@ class MainActivity : Activity() {
             gravity=Gravity.CENTER; letterSpacing=.08f
         })
         root.addView(TextView(this).apply {
-            text="خمسة عوالم لعب ثلاثية الأبعاد"
+            text="خمسة عوالم ثلاثية الأبعاد • إصدار 2.0"
             textSize=19f; setTextColor(0xFFFFD166.toInt()); gravity=Gravity.CENTER
             setPadding(0,dp(7),0,dp(5))
         })
@@ -86,7 +86,7 @@ class MainActivity : Activity() {
         scroll.addView(list)
         root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         root.addView(TextView(this).apply {
-            text="نسخة تجريبية أصلية • تحكم بالأسهم وزر التنفيذ • لا تحتاج اتصالاً بالإنترنت"
+            text="خامات عالية الدقة • تفاصيل بيئية • قفز وتحكم أسرع • تعمل دون إنترنت"
             textSize=11f; setTextColor(0xFF8193A9.toInt()); gravity=Gravity.CENTER
             setPadding(0,dp(10),0,0)
         })
