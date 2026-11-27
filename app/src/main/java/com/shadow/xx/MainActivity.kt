@@ -86,7 +86,7 @@ class MainActivity : Activity() {
         scroll.addView(list)
         root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         root.addView(TextView(this).apply {
-            text="خامات عالية الدقة • تفاصيل بيئية • قفز وتحكم أسرع • تعمل دون إنترنت"
+            text="عوالم ثلاثية الأبعاد • تحكم سريع • تعمل دون إنترنت"
             textSize=11f; setTextColor(0xFF8193A9.toInt()); gravity=Gravity.CENTER
             setPadding(0,dp(10),0,0)
         })
