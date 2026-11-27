@@ -28,6 +28,8 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
     private var textureUv = 0
     private var textureMatrix = 0
     private var textureSampler = 0
+    private var textureDetailSampler = 0
+    private var textureDetailStrength = 0
     private lateinit var groundMesh: FloatBuffer
     private lateinit var skyMesh: FloatBuffer
     private val worldTextures = HashMap<String, Int>()
@@ -90,6 +92,8 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
         textureUv = GLES20.glGetAttribLocation(textureProgram, "aUV")
         textureMatrix = GLES20.glGetUniformLocation(textureProgram, "uMVP")
         textureSampler = GLES20.glGetUniformLocation(textureProgram, "uTexture")
+        textureDetailSampler = GLES20.glGetUniformLocation(textureProgram, "uDetail")
+        textureDetailStrength = GLES20.glGetUniformLocation(textureProgram, "uDetailStrength")
         groundMesh = buffer(floatArrayOf(
             -32f,-.72f,12f, 0f,0f,  32f,-.72f,12f, 14f,0f,  32f,-.72f,-90f, 14f,28f,
             -32f,-.72f,12f, 0f,0f,  32f,-.72f,-90f, 14f,28f,  -32f,-.72f,-90f, 0f,28f
@@ -442,8 +446,9 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
     }
 
     private fun loadWorldTextures() {
-        loadWorldTexture("ground", "worlds/\u0024{worldTag}_ground.png")
-        loadWorldTexture("sky", "worlds/\u0024{worldTag}_sky.png")
+        loadWorldTexture("ground", "worlds/" + worldTag + "_ground.png")
+        loadWorldTexture("sky", "worlds/" + worldTag + "_sky.png")
+        loadWorldTexture("detail", "worlds/" + worldTag + "_detail.png")
     }
 
     private fun loadWorldTexture(key:String, path:String) {
@@ -470,12 +475,12 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
 
     private fun drawWorldBackdrop() {
         val sky=worldTextures["sky"]
-        if(sky!=null) drawTextured(skyMesh,sky)
+        if(sky!=null) drawTextured(skyMesh,sky,false)
         val ground=worldTextures["ground"]
-        if(ground!=null) drawTextured(groundMesh,ground)
+        if(ground!=null) drawTextured(groundMesh,ground,true)
     }
 
-    private fun drawTextured(vertices:FloatBuffer,texture:Int) {
+    private fun drawTextured(vertices:FloatBuffer,texture:Int,detailed:Boolean) {
         GLES20.glUseProgram(textureProgram)
         Matrix.setIdentityM(model,0)
         Matrix.multiplyMM(mv,0,view,0,model,0)
@@ -484,6 +489,12 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,texture)
         GLES20.glUniform1i(textureSampler,0)
+        val detail=worldTextures["detail"]
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+        if(detail!=null) GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detail)
+        GLES20.glUniform1i(textureDetailSampler,1)
+        GLES20.glUniform1f(textureDetailStrength,if(detailed) .085f else 0f)
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         vertices.position(0)
         GLES20.glEnableVertexAttribArray(texturePosition)
         GLES20.glVertexAttribPointer(texturePosition,3,GLES20.GL_FLOAT,false,20,vertices)
@@ -498,7 +509,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
 
     private fun buildTextureProgram():Int {
         val vs = "attribute vec4 aPosition; attribute vec2 aUV; uniform mat4 uMVP; varying vec2 vUV; void main(){ gl_Position=uMVP*aPosition; vUV=aUV; }"
-        val fs = "precision mediump float; uniform sampler2D uTexture; varying vec2 vUV; void main(){ gl_FragColor=texture2D(uTexture,vUV); }"
+        val fs = "precision mediump float; uniform sampler2D uTexture; uniform sampler2D uDetail; uniform float uDetailStrength; varying vec2 vUV; void main(){ vec3 base=texture2D(uTexture,vUV).rgb; float d=texture2D(uDetail,vUV*3.0).r; vec3 col=base*(1.0+(d-0.5)*uDetailStrength); gl_FragColor=vec4(col,1.0); }"
         fun compile(type:Int,source:String):Int {
             val shader=GLES20.glCreateShader(type)
             GLES20.glShaderSource(shader,source)
