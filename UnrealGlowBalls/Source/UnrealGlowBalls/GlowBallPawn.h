@@ -49,5 +49,8 @@ protected:
     UPROPERTY(EditAnywhere, Category="Movement")
     float JumpImpulse = 850000.0f;
 
+    UPROPERTY(EditAnywhere, Category="Movement")
+    float MaximumSpeed = 1650.0f;
+
     bool bCanJump = true;
 };
