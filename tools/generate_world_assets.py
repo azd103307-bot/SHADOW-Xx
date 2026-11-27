@@ -28,7 +28,7 @@ def make_ground(name, seed, size=2048):
         cracks = ((np.sin((x + 0.22*y) / 61.0) > .997) | (np.sin((y - .13*x) / 83.0) > .999))
         base -= cracks[..., None] * 34
         save_rgb(OUT / "city_ground.png", [base*.98, base, base*1.04])
-    elif name == "stadium":
+    elif name == "football":
         mowing = np.sin(x / 92.0) * 8.0
         blades = rng.normal(0, 12, (size, size, 1))
         base = 82 + mowing[..., None] + wave[..., None] + n + blades + fine
