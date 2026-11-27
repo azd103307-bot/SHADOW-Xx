@@ -93,7 +93,7 @@ void AGlowBallGameMode::BeginPlay()
         FVector(0, 0, 900), FRotator(-48, -32, 0));
     if (Sun)
     {
-        Sun->GetLightComponent()->SetIntensity(8.0f);
+        Sun->GetLightComponent()->SetIntensity(12000.0f);
         Sun->GetLightComponent()->SetLightColor(FLinearColor(0.62f, 0.78f, 1.0f));
     }
 
