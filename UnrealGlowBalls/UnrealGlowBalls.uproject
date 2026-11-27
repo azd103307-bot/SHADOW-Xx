@@ -1,0 +1,9 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.4",
+  "Category": "Games",
+  "Description": "A physics-based glowing ball arena starter for Unreal Engine 5.",
+  "Modules": [
+    { "Name": "UnrealGlowBalls", "Type": "Runtime", "LoadingPhase": "Default" }
+  ]
+}
