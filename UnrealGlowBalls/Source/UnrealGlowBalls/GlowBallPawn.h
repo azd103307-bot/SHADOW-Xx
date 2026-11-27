@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "TimerManager.h"
 #include "GlowBallPawn.generated.h"
 
 class USphereComponent;
@@ -26,6 +27,7 @@ protected:
     void MoveRight(float Value);
     void JumpPressed();
     void JumpReleased();
+    void ResetJump();
 
     UPROPERTY(VisibleAnywhere, Category="Ball")
     TObjectPtr<USphereComponent> CollisionSphere;
@@ -49,4 +51,5 @@ protected:
     float JumpImpulse = 850000.0f;
 
     bool bCanJump = true;
+    FTimerHandle JumpResetHandle;
 };
