@@ -86,10 +86,21 @@ def make_sky(name, seed, w=1280, h=640):
         arr += stars[...,None]*210
     Image.fromarray(arr.clip(0,255).astype("uint8"), "RGB").save(OUT / f"{name}_sky.png", "PNG", compress_level=1, optimize=False)
 
+def make_detail(name, seed, size=2048):
+    # A high-frequency surface micro-detail map, sampled subtly by the 3D material shader.
+    rng = np.random.default_rng(seed)
+    raw = rng.integers(0, 256, (size, size, 3), dtype=np.uint8)
+    # Add soft, world-specific roughness variation without turning the map into a flat noise fill.
+    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
+    broad = ((np.sin(x/37.0 + seed) + np.cos(y/43.0) + np.sin((x-y)/59.0)) * 13.0)
+    raw = np.clip(raw.astype(np.float32) * .72 + 34.0 + broad[..., None], 0, 255).astype(np.uint8)
+    Image.fromarray(raw, "RGB").save(OUT / f"{name}_detail.png", "PNG", compress_level=1, optimize=False)
+
 worlds = ["city", "football", "forest", "flight", "space"]
 for i, world in enumerate(worlds, 1):
     make_ground(world, 700+i)
     make_sky(world, 1700+i)
+    make_detail(world, 2700+i)
 
 total = sum(p.stat().st_size for p in OUT.glob("*.png"))
 print(f"Generated {len(list(OUT.glob('*.png')))} original world textures: {total:,} bytes ({total/1024/1024:.1f} MiB)")
