@@ -10,4 +10,5 @@ class UNREALGLOWBALLS_API AGlowBallGameMode : public AGameModeBase
 public:
     AGlowBallGameMode();
     virtual void BeginPlay() override;
+    void RegisterOrbCollected();
 };
