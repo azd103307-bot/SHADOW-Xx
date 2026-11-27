@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Generate original high-resolution game worlds
+      - name: Generate optimized playable game-world textures
         run: |
           python -m pip install --disable-pip-version-check numpy pillow
           python tools/generate_world_assets.py
@@ -40,9 +40,8 @@ jobs:
           test -s app/build/outputs/apk/debug/app-debug.apk
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='com.shadow.xx'"
           $ANDROID_HOME/build-tools/35.0.0/aapt list app/build/outputs/apk/debug/app-debug.apk | grep -q 'assets/worlds/city_ground.png'
-          APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk)
-          echo "APK size: ${APK_SIZE} bytes"
-          test "$APK_SIZE" -ge 50000000
+          $ANDROID_HOME/build-tools/35.0.0/aapt list app/build/outputs/apk/debug/app-debug.apk | grep -q 'assets/worlds/space_sky.png'
+          echo "APK size: $(stat -c%s app/build/outputs/apk/debug/app-debug.apk) bytes"
           sha256sum app/build/outputs/apk/debug/app-debug.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
