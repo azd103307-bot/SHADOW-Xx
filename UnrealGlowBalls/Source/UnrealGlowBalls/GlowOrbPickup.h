@@ -5,6 +5,7 @@
 #include "GlowOrbPickup.generated.h"
 
 class USphereComponent;
+class UPrimitiveComponent;
 class UStaticMeshComponent;
 class UPointLightComponent;
 
