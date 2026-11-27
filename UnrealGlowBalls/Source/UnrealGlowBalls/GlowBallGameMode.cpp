@@ -56,10 +56,10 @@ void AGlowBallGameMode::BeginPlay()
 
     // Floating collectible energy orbs.
     const FVector OrbPositions[12] = {
-        FVector(-1850,-1650,190), FVector(-900,-1650,230), FVector(0,-1650,190),
-        FVector(900,-1650,230), FVector(1850,-1650,190), FVector(1850,-500,240),
-        FVector(1850,650,190), FVector(900,1650,230), FVector(0,1650,190),
-        FVector(-900,1650,230), FVector(-1850,1650,190), FVector(-1850,450,240)
+        FVector(-1850,-1650,145), FVector(-900,-1650,155), FVector(0,-1650,145),
+        FVector(900,-1650,155), FVector(1850,-1650,145), FVector(1850,-500,160),
+        FVector(1850,650,145), FVector(900,1650,155), FVector(0,1650,145),
+        FVector(-900,1650,155), FVector(-1850,1650,145), FVector(-1850,450,160)
     };
     for (const FVector& Position : OrbPositions)
     {
