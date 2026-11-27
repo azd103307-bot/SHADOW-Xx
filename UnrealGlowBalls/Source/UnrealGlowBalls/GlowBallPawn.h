@@ -9,6 +9,7 @@ class UStaticMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UPointLightComponent;
+class UPostProcessComponent;
 
 UCLASS()
 class UNREALGLOWBALLS_API AGlowBallPawn : public APawn
@@ -42,6 +43,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, Category="Effects")
     TObjectPtr<UPointLightComponent> GlowLight;
+
+    UPROPERTY(VisibleAnywhere, Category="Effects")
+    TObjectPtr<UPostProcessComponent> GlowPostProcess;
 
     UPROPERTY(EditAnywhere, Category="Movement")
     float DriveForce = 180000.0f;
