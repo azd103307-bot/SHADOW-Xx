@@ -1,6 +1,7 @@
 #include "GlowBallGameMode.h"
 #include "GlowBallPawn.h"
 #include "GlowOrbPickup.h"
+#include "GlowHazardBall.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
@@ -64,6 +65,28 @@ void AGlowBallGameMode::BeginPlay()
     for (const FVector& Position : OrbPositions)
     {
         World->SpawnActor<AGlowOrbPickup>(Position, FRotator::ZeroRotator);
+    }
+
+    // Roaming physics balls add moving collisions and color to the arena.
+    const FVector HazardStarts[6] = {
+        FVector(-1750, -900, 260), FVector(1750, -900, 260),
+        FVector(-1750, 900, 260), FVector(1750, 900, 260),
+        FVector(0, -2050, 260), FVector(0, 2050, 260)
+    };
+    const FLinearColor HazardColors[6] = {
+        FLinearColor(0.05f, 0.55f, 1.0f), FLinearColor(1.0f, 0.12f, 0.25f),
+        FLinearColor(0.35f, 1.0f, 0.12f), FLinearColor(0.85f, 0.15f, 1.0f),
+        FLinearColor(1.0f, 0.55f, 0.05f), FLinearColor(0.05f, 1.0f, 0.8f)
+    };
+    for (int32 i = 0; i < 6; ++i)
+    {
+        AGlowHazardBall* Hazard = World->SpawnActor<AGlowHazardBall>(
+            HazardStarts[i], FRotator::ZeroRotator);
+        if (Hazard)
+        {
+            const FVector TowardCenter = (-HazardStarts[i]).GetSafeNormal();
+            Hazard->Launch(HazardColors[i], TowardCenter * 9000.0f + FVector(0, 0, 900.0f));
+        }
     }
 
     ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(
