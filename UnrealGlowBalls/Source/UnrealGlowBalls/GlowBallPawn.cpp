@@ -64,6 +64,25 @@ void AGlowBallPawn::BeginPlay()
     }
 }
 
+void AGlowBallPawn::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    if (!CollisionSphere) return;
+
+    const FVector Start = CollisionSphere->GetComponentLocation();
+    const FVector End = Start - FVector(0.0f, 0.0f, 92.0f);
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+    const bool bGrounded = GetWorld()->SweepSingleByChannel(
+        Hit, Start, End, FQuat::Identity, ECC_Visibility,
+        FCollisionShape::MakeSphere(58.0f), Params);
+    if (bGrounded && CollisionSphere->GetPhysicsLinearVelocity().Z <= 35.0f)
+    {
+        bCanJump = true;
+    }
+}
+
 void AGlowBallPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -102,16 +121,8 @@ void AGlowBallPawn::JumpPressed()
     {
         CollisionSphere->AddImpulse(FVector::UpVector * JumpImpulse);
         bCanJump = false;
-        GetWorldTimerManager().SetTimerForNextTick([this]()
-        {
-            GetWorldTimerManager().SetTimer(JumpResetHandle, this, &AGlowBallPawn::ResetJump, 0.35f, false);
-        });
     }
 }
 
 void AGlowBallPawn::JumpReleased() {}
 
-void AGlowBallPawn::ResetJump()
-{
-    bCanJump = true;
-}
