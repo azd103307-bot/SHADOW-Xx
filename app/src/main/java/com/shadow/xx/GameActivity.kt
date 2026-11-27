@@ -16,7 +16,8 @@ import android.graphics.drawable.GradientDrawable
 class GameActivity : Activity() {
     private lateinit var surface: GLSurfaceView
     private lateinit var engine: ArenaRenderer
-    private lateinit var scoreView: TextView\n    private lateinit var livesView: TextView
+    private lateinit var scoreView: TextView
+    private lateinit var livesView: TextView
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     private fun pill(color:Int): GradientDrawable = GradientDrawable().apply {
         setColor(color); cornerRadius=dp(18).toFloat(); setStroke(dp(1),0x55FFFFFF)
@@ -41,7 +42,9 @@ class GameActivity : Activity() {
         val top=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
         val title=TextView(this).apply { text=names[mode]; textSize=20f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD; setPadding(dp(14),dp(7),dp(14),dp(7)); background=pill(0xAA101B2B.toInt()) }
         scoreView=TextView(this).apply { text="النقاط: 0"; textSize=17f; setTextColor(Color.WHITE); setPadding(dp(14),dp(7),dp(14),dp(7)); background=pill(0xAA101B2B.toInt()) }
-        val lives=TextView(this).apply { text="❤️ 3"; textSize=16f; setTextColor(Color.WHITE); setPadding(dp(10),dp(7),dp(10),dp(7)); background=pill(0xAA101B2B.toInt()) }\n        livesView=lives\n        val back=Button(this).apply { text="رجوع"; isAllCaps=false; textSize=14f; setOnClickListener { finish() } }
+        val lives=TextView(this).apply { text="❤️ 3"; textSize=16f; setTextColor(Color.WHITE); setPadding(dp(10),dp(7),dp(10),dp(7)); background=pill(0xAA101B2B.toInt()) }
+        livesView=lives
+        val back=Button(this).apply { text="رجوع"; isAllCaps=false; textSize=14f; setOnClickListener { finish() } }
         top.addView(title,LinearLayout.LayoutParams(0,dp(44),1f))
         top.addView(scoreView,LinearLayout.LayoutParams(-2,dp(44)))
         top.addView(livesView,LinearLayout.LayoutParams(-2,dp(44)))
@@ -70,7 +73,8 @@ class GameActivity : Activity() {
         dpad.addView(row1); dpad.addView(row2)
         bottom.addView(dpad)
         bottom.addView(Space(this),LinearLayout.LayoutParams(0,dp(1),1f))
-        val actionLabel=when(mode) { 1 -> "⚡ تسريع"; 2 -> "⚽ تسديد"; 5 -> "🚀 إطلاق"; else -> "✦ تفاعل" }\n        bottom.addView(control(actionLabel,{engine.action=true},{engine.action=false}),LinearLayout.LayoutParams(dp(124),dp(58)))
+        val actionLabel=when(mode) { 1 -> "⚡ تسريع"; 2 -> "⚽ تسديد"; 5 -> "🚀 إطلاق"; else -> "✦ تفاعل" }
+        bottom.addView(control(actionLabel,{engine.action=true},{engine.action=false}),LinearLayout.LayoutParams(dp(124),dp(58)))
         overlay.addView(bottom)
         root.addView(overlay,FrameLayout.LayoutParams(-1,-1))
         engine.onHud={points,health->runOnUiThread { scoreView.text="النقاط: $points"; livesView.text="❤️ $health" }}
