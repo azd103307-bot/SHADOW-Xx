@@ -48,6 +48,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
     private var playerX = 0f
     private var playerY = 0f
     private var ballZ = -4f
+    private var ballX = 0f
     private var ballV = 0f
     private var shotZ = -100f
     private var shotX = 0f
@@ -190,12 +191,12 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
                 ballZ+=ballV*dt
                 ballV*=.992f
                 if(ballZ < -28f) {
-                    if(ballKicked) score+=1
-                    ballZ=-4f; ballV=0f; ballKicked=false
+                    if(ballKicked && abs(ballX)<3.5f) score+=1
+                    ballZ=-4f; ballX=0f; ballV=0f; ballKicked=false
                 }
                 if(ballZ > -2f) { ballZ=-4f; ballV=0f }
                 if(tap && !ballKicked && abs(ballZ+4f)<2f && abs(playerX)<4.5f) {
-                    ballV=-24f; ballZ=-3.8f; ballKicked=true
+                    ballV=-24f; ballZ=-3.8f; ballX=playerX; ballKicked=true
                 }
             }
             3 -> {
@@ -296,7 +297,7 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
         box(0f,1.6f,-29f,8f,3.2f,.25f,white)
         box(-4f,.8f,-29f,.22f,1.6f,.22f,white)
         box(4f,.8f,-29f,.22f,1.6f,.22f,white)
-        sphereAt(playerX,.45f,ballZ,.52f,white)
+        sphereAt(if(ballKicked) ballX else playerX,.45f,ballZ,.52f,white)
         for(i in 0..5) {
             val x=-9f+i*3.6f
             sphereAt(x,1.1f,-25f,.2f,blue)
