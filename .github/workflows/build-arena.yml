@@ -4,6 +4,7 @@ on:
     branches: [ arena-5-games ]
     paths:
       - 'app/**'
+      - 'tools/**'
       - '.github/workflows/build-arena.yml'
       - 'build.gradle.kts'
   workflow_dispatch:
@@ -19,6 +20,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate original high-resolution game worlds
+        run: |
+          python -m pip install --disable-pip-version-check numpy pillow
+          python tools/generate_world_assets.py
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
@@ -31,9 +39,11 @@ jobs:
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='com.shadow.xx'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt list app/build/outputs/apk/debug/app-debug.apk | grep -q 'assets/worlds/city_ground.png'
+          stat -c 'APK size: %s bytes' app/build/outputs/apk/debug/app-debug.apk
           sha256sum app/build/outputs/apk/debug/app-debug.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: FIVE-3D-GAMES-debug
+          name: FIVE-3D-GAMES-v2-debug
           path: app/build/outputs/apk/debug/app-debug.apk
