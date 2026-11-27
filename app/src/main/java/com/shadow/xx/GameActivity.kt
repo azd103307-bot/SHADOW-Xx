@@ -34,7 +34,7 @@ class GameActivity : Activity() {
             setEGLContextClientVersion(2)
             preserveEGLContextOnPause=true
         }
-        engine=ArenaRenderer(mode)
+        engine=ArenaRenderer(mode,assets)
         surface.setRenderer(engine)
         surface.renderMode=GLSurfaceView.RENDERMODE_CONTINUOUSLY
         root.addView(surface,FrameLayout.LayoutParams(-1,-1))
@@ -75,6 +75,12 @@ class GameActivity : Activity() {
         bottom.addView(Space(this),LinearLayout.LayoutParams(0,dp(1),1f))
         val actionLabel=when(mode) { 1 -> "⚡ تسريع"; 2 -> "⚽ تسديد"; 5 -> "🚀 إطلاق"; else -> "✦ تفاعل" }
         bottom.addView(control(actionLabel,{engine.action=true},{engine.action=false}),LinearLayout.LayoutParams(dp(124),dp(58)))
+        val jumpControl=if(mode>=4) {
+            control("⬆ ارتفاع",{engine.moveY=1f},{engine.moveY=0f})
+        } else {
+            control("⬆ قفز",{engine.jumpAction=true},{engine.jumpAction=false})
+        }
+        bottom.addView(jumpControl,LinearLayout.LayoutParams(dp(108),dp(58)).apply { marginStart=dp(8) })
         overlay.addView(bottom)
         root.addView(overlay,FrameLayout.LayoutParams(-1,-1))
         engine.onHud={points,health->runOnUiThread { scoreView.text="النقاط: $points"; livesView.text="❤️ $health" }}
