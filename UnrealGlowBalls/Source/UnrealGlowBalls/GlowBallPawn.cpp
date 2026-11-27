@@ -69,6 +69,14 @@ void AGlowBallPawn::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
     if (!CollisionSphere) return;
 
+    const FVector Velocity = CollisionSphere->GetPhysicsLinearVelocity();
+    const float HorizontalSpeed = FVector(Velocity.X, Velocity.Y, 0.0f).Size();
+    if (HorizontalSpeed > MaximumSpeed)
+    {
+        const FVector Limited = FVector(Velocity.X, Velocity.Y, 0.0f).GetSafeNormal() * MaximumSpeed;
+        CollisionSphere->SetPhysicsLinearVelocity(FVector(Limited.X, Limited.Y, Velocity.Z));
+    }
+
     const FVector Start = CollisionSphere->GetComponentLocation();
     const FVector End = Start - FVector(0.0f, 0.0f, 92.0f);
     FHitResult Hit;
