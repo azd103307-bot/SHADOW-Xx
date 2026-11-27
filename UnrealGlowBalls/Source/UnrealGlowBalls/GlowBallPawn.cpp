@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/PlayerController.h"
@@ -37,7 +38,14 @@ AGlowBallPawn::AGlowBallPawn()
     GlowLight->SetIntensity(9500.0f);
     GlowLight->SetAttenuationRadius(620.0f);
     GlowLight->SetLightColor(FLinearColor(0.08f, 0.65f, 1.0f));
-    GlowLight->SetCastShadows(true);
+    GlowLight->SetCastShadows(false);
+
+    GlowPostProcess = CreateDefaultSubobject<UPostProcessComponent>(TEXT("GlowBloom"));
+    GlowPostProcess->SetupAttachment(CollisionSphere);
+    GlowPostProcess->bUnbound = true;
+    GlowPostProcess->BlendWeight = 1.0f;
+    GlowPostProcess->Settings.bOverride_BloomIntensity = true;
+    GlowPostProcess->Settings.BloomIntensity = 2.2f;
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     SpringArm->SetupAttachment(CollisionSphere);
