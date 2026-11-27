@@ -4,7 +4,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Components/DirectionalLightComponent.h"
-#include "UObject/ConstructorHelpers.h"
+
 
 AGlowBallGameMode::AGlowBallGameMode()
 {
@@ -23,10 +23,10 @@ void AGlowBallGameMode::BeginPlay()
         FVector(0.0f, 0.0f, -122.0f), FRotator::ZeroRotator);
     if (Floor)
     {
-        static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
-        if (CubeAsset.Succeeded())
+        UStaticMesh* CubeAsset = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+        if (CubeAsset)
         {
-            Floor->GetStaticMeshComponent()->SetStaticMesh(CubeAsset.Object);
+            Floor->GetStaticMeshComponent()->SetStaticMesh(CubeAsset);
             Floor->SetActorScale3D(FVector(50.0f, 50.0f, 1.0f));
             Floor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Static);
             Floor->GetStaticMeshComponent()->SetCollisionProfileName(TEXT("BlockAll"));
