@@ -1,6 +1,7 @@
 package com.shadow.xx
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
@@ -22,6 +23,7 @@ class GameActivity : Activity() {
     private var rightHeld=false
     private var upHeld=false
     private var downHeld=false
+    private var gameOverShown=false
     private fun refreshMovement() {
         if(::engine.isInitialized) {
             engine.moveX=(if(rightHeld) 1f else 0f)-(if(leftHeld) 1f else 0f)
@@ -93,7 +95,23 @@ class GameActivity : Activity() {
         bottom.addView(jumpControl,LinearLayout.LayoutParams(dp(108),dp(58)).apply { marginStart=dp(8) })
         overlay.addView(bottom)
         root.addView(overlay,FrameLayout.LayoutParams(-1,-1))
-        engine.onHud={points,health->runOnUiThread { scoreView.text="النقاط: $points"; livesView.text="❤️ $health" }}
+        engine.onHud={points,health->runOnUiThread {
+            scoreView.text="النقاط: $points"
+            livesView.text="❤️ $health"
+            if(health<=0 && !gameOverShown) {
+                gameOverShown=true
+                leftHeld=false; rightHeld=false; upHeld=false; downHeld=false
+                refreshMovement()
+                engine.action=false; engine.jumpAction=false
+                AlertDialog.Builder(this)
+                    .setTitle("انتهت اللعبة")
+                    .setMessage("نتيجتك: $points")
+                    .setCancelable(false)
+                    .setPositiveButton("إعادة اللعب") { _, _ -> recreate() }
+                    .setNegativeButton("العودة للقائمة") { _, _ -> finish() }
+                    .show()
+            }
+        }}
         setContentView(root)
     }
     override fun onPause(){ leftHeld=false; rightHeld=false; upHeld=false; downHeld=false; refreshMovement(); super.onPause(); if(::surface.isInitialized) surface.onPause() }
