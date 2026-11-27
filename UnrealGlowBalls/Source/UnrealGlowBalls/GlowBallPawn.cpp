@@ -110,3 +110,8 @@ void AGlowBallPawn::JumpPressed()
 }
 
 void AGlowBallPawn::JumpReleased() {}
+
+void AGlowBallPawn::ResetJump()
+{
+    bCanJump = true;
+}
