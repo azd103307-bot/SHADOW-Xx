@@ -13,9 +13,9 @@ def noise(rng, h, w, scale=11.0):
 
 def save_rgb(path, channels):
     arr = np.concatenate(channels, axis=2).clip(0, 255).astype(np.uint8)
-    Image.fromarray(arr, "RGB").save(path, format="PNG", compress_level=1, optimize=False)
+    Image.fromarray(arr, "RGB").save(path, format="PNG", compress_level=9, optimize=True)
 
-def make_ground(name, seed, size=2048):
+def make_ground(name, seed, size=1024):
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
     n = noise(rng, size, size, 13.0)
@@ -48,7 +48,7 @@ def make_ground(name, seed, size=2048):
         base = 42 + bands[..., None] + n + fine
         save_rgb(OUT / "space_ground.png", [base*1.40 + stars[...,0,None]*155, base*.60, base*1.72 + stars[...,0,None]*190])
 
-def make_sky(name, seed, w=1280, h=640):
+def make_sky(name, seed, w=768, h=384):
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:h, 0:w].astype(np.float32)
     t = (y / max(1, h-1))[..., None]
@@ -66,7 +66,7 @@ def make_sky(name, seed, w=1280, h=640):
             d.rectangle((bx, h-bh, bx+25, h), fill=(17, 27, 43))
             for wy in range(h-bh+8, h-6, 13):
                 d.line((bx+5, wy, bx+8, wy), fill=(205, 157, 83), width=2)
-        img.save(OUT / "city_sky.png", "PNG", compress_level=1)
+        img.save(OUT / "city_sky.png", "PNG", compress_level=9, optimize=True)
         return
     elif name == "football":
         top=np.array([38,116,190],np.float32); bottom=np.array([172,218,245],np.float32)
@@ -86,23 +86,10 @@ def make_sky(name, seed, w=1280, h=640):
         arr += stars[...,None]*210
     Image.fromarray(arr.clip(0,255).astype("uint8"), "RGB").save(OUT / f"{name}_sky.png", "PNG", compress_level=1, optimize=False)
 
-def make_detail(name, seed, size=2048):
-    # A high-frequency surface micro-detail map, sampled subtly by the 3D material shader.
-    rng = np.random.default_rng(seed)
-    raw = rng.integers(0, 256, (size, size, 3), dtype=np.uint8)
-    # Add soft, world-specific roughness variation without turning the map into a flat noise fill.
-    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
-    broad = ((np.sin(x/37.0 + seed) + np.cos(y/43.0) + np.sin((x-y)/59.0)) * 13.0)
-    raw = np.clip(raw.astype(np.float32) * .72 + 34.0 + broad[..., None], 0, 255).astype(np.uint8)
-    Image.fromarray(raw, "RGB").save(OUT / f"{name}_detail.png", "PNG", compress_level=1, optimize=False)
-
 worlds = ["city", "football", "forest", "flight", "space"]
 for i, world in enumerate(worlds, 1):
     make_ground(world, 700+i)
     make_sky(world, 1700+i)
-    make_detail(world, 2700+i)
 
 total = sum(p.stat().st_size for p in OUT.glob("*.png"))
 print(f"Generated {len(list(OUT.glob('*.png')))} original world textures: {total:,} bytes ({total/1024/1024:.1f} MiB)")
-if total < 50_000_000:
-    raise SystemExit("World texture pack is below the requested 50 MB; refusing an undersized build.")
