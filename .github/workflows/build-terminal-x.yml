@@ -1,0 +1,36 @@
+name: Build TERMINAL X APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [ terminal-x ]
+    paths:
+      - 'terminal/**'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - '.github/workflows/build-terminal-x.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build TERMINAL X
+        run: gradle --no-daemon :terminal:assembleDebug
+      - name: Verify APK
+        run: |
+          test -s terminal/build/outputs/apk/debug/terminal-debug.apk
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging terminal/build/outputs/apk/debug/terminal-debug.apk | grep -q "package: name='com.terminalx.app'"
+          sha256sum terminal/build/outputs/apk/debug/terminal-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TERMINAL-X-debug
+          path: terminal/build/outputs/apk/debug/terminal-debug.apk
