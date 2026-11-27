@@ -48,10 +48,10 @@ protected:
     TObjectPtr<UPostProcessComponent> GlowPostProcess;
 
     UPROPERTY(EditAnywhere, Category="Movement")
-    float DriveForce = 180000.0f;
+    float DriveForce = 90000.0f;
 
     UPROPERTY(EditAnywhere, Category="Movement")
-    float JumpImpulse = 850000.0f;
+    float JumpImpulse = 36000.0f;
 
     UPROPERTY(EditAnywhere, Category="Movement")
     float MaximumSpeed = 1650.0f;
