@@ -11,4 +11,8 @@ public:
     AGlowBallGameMode();
     virtual void BeginPlay() override;
     void RegisterOrbCollected();
+
+private:
+    int32 CollectedOrbs = 0;
+    int32 TotalOrbs = 12;
 };
