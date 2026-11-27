@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Generate high-resolution, original, offline game-world textures."""
+"""Generate compact ground and sky textures used by the five playable worlds."""
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
-import math
 
 OUT = Path("app/src/main/assets/worlds")
 OUT.mkdir(parents=True, exist_ok=True)
@@ -84,7 +83,10 @@ def make_sky(name, seed, w=768, h=384):
         arr += np.concatenate([np.maximum(0,neb)*28,np.maximum(0,neb)*9,np.maximum(0,neb)*43],axis=2)
         stars=rng.random((h,w))>.996
         arr += stars[...,None]*210
-    Image.fromarray(arr.clip(0,255).astype("uint8"), "RGB").save(OUT / f"{name}_sky.png", "PNG", compress_level=1, optimize=False)
+    Image.fromarray(arr.clip(0,255).astype("uint8"), "RGB").save(OUT / f"{name}_sky.png", "PNG", compress_level=9, optimize=True)
+
+for stale in OUT.glob("*_detail.png"):
+    stale.unlink()
 
 worlds = ["city", "football", "forest", "flight", "space"]
 for i, world in enumerate(worlds, 1):
@@ -92,4 +94,4 @@ for i, world in enumerate(worlds, 1):
     make_sky(world, 1700+i)
 
 total = sum(p.stat().st_size for p in OUT.glob("*.png"))
-print(f"Generated {len(list(OUT.glob('*.png')))} original world textures: {total:,} bytes ({total/1024/1024:.1f} MiB)")
+print(f"Generated {len(list(OUT.glob('*.png')))} playable world textures: {total:,} bytes ({total/1024/1024:.1f} MiB)")
