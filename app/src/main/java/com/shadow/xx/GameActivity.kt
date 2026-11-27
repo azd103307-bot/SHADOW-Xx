@@ -44,6 +44,7 @@ class GameActivity : Activity() {
         val lives=TextView(this).apply { text="❤️ 3"; textSize=16f; setTextColor(Color.WHITE); setPadding(dp(10),dp(7),dp(10),dp(7)); background=pill(0xAA101B2B.toInt()) }\n        livesView=lives\n        val back=Button(this).apply { text="رجوع"; isAllCaps=false; textSize=14f; setOnClickListener { finish() } }
         top.addView(title,LinearLayout.LayoutParams(0,dp(44),1f))
         top.addView(scoreView,LinearLayout.LayoutParams(-2,dp(44)))
+        top.addView(livesView,LinearLayout.LayoutParams(-2,dp(44)))
         top.addView(back,LinearLayout.LayoutParams(dp(82),dp(44)))
         overlay.addView(top)
         val spacer=Space(this)
