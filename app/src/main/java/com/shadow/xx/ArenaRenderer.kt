@@ -94,9 +94,10 @@ class ArenaRenderer(private val mode: Int, private val assets: AssetManager) : G
         textureSampler = GLES20.glGetUniformLocation(textureProgram, "uTexture")
         textureDetailSampler = GLES20.glGetUniformLocation(textureProgram, "uDetail")
         textureDetailStrength = GLES20.glGetUniformLocation(textureProgram, "uDetailStrength")
+        val groundY=when(mode) { 3 -> .015f; 4 -> -2.05f; 5 -> -.72f; else -> -.045f }
         groundMesh = buffer(floatArrayOf(
-            -32f,-.72f,12f, 0f,0f,  32f,-.72f,12f, 14f,0f,  32f,-.72f,-90f, 14f,28f,
-            -32f,-.72f,12f, 0f,0f,  32f,-.72f,-90f, 14f,28f,  -32f,-.72f,-90f, 0f,28f
+            -32f,groundY,12f, 0f,0f,  32f,groundY,12f, 14f,0f,  32f,groundY,-90f, 14f,28f,
+            -32f,groundY,12f, 0f,0f,  32f,groundY,-90f, 14f,28f,  -32f,groundY,-90f, 0f,28f
         ))
         skyMesh = buffer(floatArrayOf(
             -100f,-8f,-92f, 0f,1f,  100f,-8f,-92f, 1f,1f,  100f,65f,-92f, 1f,0f,
