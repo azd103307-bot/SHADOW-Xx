@@ -1,6 +1,6 @@
 package com.lasaqti.app;
 
-import android.app.Service;
+import android.app.*;
 import android.content.*;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
@@ -12,7 +12,10 @@ public class FloatingService extends Service {
     WindowManager wm; View panel; WindowManager.LayoutParams lp; int size=1;
     public IBinder onBind(Intent i){ return null; }
     TextView action(String label){ TextView t=new TextView(this); t.setText(label); t.setTextColor(Color.WHITE); t.setTextSize(14); t.setGravity(Gravity.CENTER); t.setPadding(12,9,12,9); t.setBackgroundColor(0xff5146a5); return t; }
-    public void onCreate(){ super.onCreate(); wm=(WindowManager)getSystemService(WINDOW_SERVICE);
+    @Override public void onCreate(){
+        super.onCreate();
+        startForeground(77, buildNotification());
+        wm=(WindowManager)getSystemService(WINDOW_SERVICE);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(6,6,6,6); box.setBackgroundColor(0xee29235c);
         TextView drag=action("لصقتي  ⋮  اسحب للتحريك"); box.addView(drag);
         LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
@@ -26,5 +29,11 @@ public class FloatingService extends Service {
         lp.gravity=Gravity.RIGHT|Gravity.CENTER_VERTICAL; wm.addView(panel,lp);
         drag.setOnTouchListener(new View.OnTouchListener(){ int sx,sy,ox,oy; public boolean onTouch(View v,MotionEvent e){ if(e.getAction()==MotionEvent.ACTION_DOWN){sx=(int)e.getRawX();sy=(int)e.getRawY();ox=lp.x;oy=lp.y;return true;} if(e.getAction()==MotionEvent.ACTION_MOVE){lp.x=ox+sx-(int)e.getRawX();lp.y=oy+(int)e.getRawY()-sy;wm.updateViewLayout(panel,lp);return true;} return true; }});
     }
-    public void onDestroy(){ if(panel!=null&&wm!=null) try{wm.removeView(panel);}catch(Exception ignored){} super.onDestroy(); }
+    private Notification buildNotification(){
+        String channel="lasaqti_overlay";
+        if(Build.VERSION.SDK_INT>=26){ NotificationChannel c=new NotificationChannel(channel,"أزرار لصقتي العائمة",NotificationManager.IMPORTANCE_LOW); ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(c); }
+        Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,channel):new Notification.Builder(this);
+        return b.setSmallIcon(android.R.drawable.ic_menu_edit).setContentTitle("لصقتي يعمل").setContentText("أزرار النسخ واللصق العائمة مفعّلة").setOngoing(true).build();
+    }
+    @Override public void onDestroy(){ if(panel!=null&&wm!=null) try{wm.removeView(panel);}catch(Exception ignored){} stopForeground(true); super.onDestroy(); }
 }
