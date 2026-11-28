@@ -119,9 +119,9 @@ public class AccessibilityPasteService extends AccessibilityService {
                 if (a < 0 || b < 0) a = b = len;
                 a = Math.max(0, Math.min(a, len));
                 b = Math.max(a, Math.min(b, len));
-                String updated = (old == null ? "" : old.subSequence(0, a)) +
-                    (insert == null ? "" : insert) +
-                    (old == null ? "" : old.subSequence(b, len));
+                String updated = (old == null ? "" : old.subSequence(0, a).toString()) +
+                    (insert == null ? "" : insert.toString()) +
+                    (old == null ? "" : old.subSequence(b, len).toString());
                 Bundle args = new Bundle();
                 args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, updated);
                 ok = n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
